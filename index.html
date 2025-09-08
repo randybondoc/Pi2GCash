@@ -4,37 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi to GCash Exchange</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter font from Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #111827;
-        color: #f3f4f6;
-      }
-      .loader {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #5E2E87;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      /* Style for the date/time picker icon to be visible on dark background */
-      input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-        filter: invert(0.8);
-      }
+        body { font-family: 'Inter', sans-serif; }
+        .backdrop-blur-sm { backdrop-filter: blur(4px); }
     </style>
+    <!-- Your AdSense Connector Code -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1048178550469494"
+     crossorigin="anonymous"></script>
 </head>
-<body class="antialiased">
+<body class="bg-gray-900 text-gray-200">
 
     <!-- Main Application Container -->
     <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6">
@@ -48,128 +30,104 @@
                     <span class="text-gray-200">Exchange</span>
                 </h1>
              </div>
-             <div id="user-info" class="mt-4 text-sm text-gray-400"></div>
+            <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
         </header>
 
-        <!-- Loading View -->
-        <div id="loading-view" class="flex flex-col items-center justify-center p-10">
-            <div class="loader"></div>
-            <p class="mt-4 text-gray-400">Initializing Secure Connection...</p>
+        <!-- Loading Screen -->
+        <div id="loading-view" class="text-center py-20">
+            <p>Initializing Secure Connection...</p>
         </div>
 
-        <!-- Login View -->
-        <div id="login-view" class="hidden text-center bg-gray-800 p-8 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-bold mb-2 text-white">Welcome!</h2>
-            <p class="text-gray-400 mb-6">Please sign in to continue.</p>
-            <div class="space-y-4">
-                <button id="google-login-btn" class="w-full flex items-center justify-center bg-white text-gray-800 font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-gray-200 transition duration-300">
-                    <svg class="w-6 h-6 mr-3" xmlns="http://www.w.g.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.986,36.639,44,30.865,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
-                    Sign in with Google
-                </button>
-                <button id="facebook-login-btn" class="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
-                    <svg class="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M22,12c0-5.523-4.477-10-10-10S2,6.477,2,12c0,4.99,3.657,9.128,8.438,9.878V14.89h-2.54V12h2.54V9.797c0-2.506,1.492-3.89,3.777-3.89c1.094,0,2.238.195,2.238.195v2.46h-1.26c-1.24,0-1.628.772-1.628,1.562V12h2.773l-.443,2.89h-2.33V21.878C18.343,21.128,22,16.99,22,12Z"/></svg>
-                    Sign in with Facebook
-                </button>
-            </div>
+        <!-- Login Screen -->
+        <div id="login-view" class="hidden text-center py-20">
+            <h2 class="text-2xl font-bold mb-4">Welcome</h2>
+            <p class="mb-6">Please sign in to continue.</p>
+            <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Sign in with Google</button>
+        </div>
+        
+        <!-- FB Group Gate Screen -->
+        <div id="fb-gate-view" class="hidden text-center py-16 bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">One More Step!</h2>
+            <p class="mb-6 text-gray-300">To ensure a safe community, all users are required to join our official Facebook group before transacting.</p>
+            <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mb-4 transition">
+                Join Facebook Group
+            </a>
+            <p class="text-sm text-gray-400 mb-6">After joining, come back here and click the button below.</p>
+            <button id="fb-continue-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">I Have Joined the Group, Continue to App</button>
         </div>
 
-        <!-- FB Group Gate View -->
-        <div id="fb-gate-view" class="hidden text-center bg-gray-800 p-8 rounded-lg shadow-lg">
-             <h2 class="text-2xl font-bold mb-2 text-white">One Last Step!</h2>
-             <p class="text-gray-400 mb-6">For community safety and support, you must be a member of our official Facebook group to use this service.</p>
-             <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="block w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 mb-4">
-                Click Here to Join the Facebook Group
-             </a>
-             <button id="fb-confirm-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-700 transition duration-300">
-                I Have Joined the Group, Continue to App
-             </button>
-        </div>
+        <!-- Main Content -->
+        <main id="main-view" class="hidden space-y-6">
 
-        <!-- Main Application View -->
-        <div id="main-app-view" class="hidden space-y-6">
-            
-            <!-- How to Transact Guide -->
-             <div class="bg-gray-800 p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-4 text-white">How to Transact</h3>
-                
-                <div class="space-y-4 text-gray-300">
-                    <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">1</div>
-                        <p>Use the buttons below to open your Pi Browser and access your Pi Wallet.</p>
-                    </div>
-
-                    <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">2</div>
-                        <div>
-                            <p>Transfer the amount of Pi you want to exchange to this exact wallet address:</p>
-                            <div class="mt-2 flex items-center bg-gray-700 p-2 rounded-md">
-                                <input id="pi-wallet-address" readonly class="bg-transparent font-mono text-base sm:text-lg w-full text-amber-400" value="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
-                                <button id="copy-address-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
-                                </button>
-                            </div>
-                            <p class="text-xs text-yellow-300 mt-2">Warning: Be very careful with the wallet address. To avoid mistakes, please use the copy button.</p>
+            <!-- Step 1: Wallet Transfer -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 1: Transfer Your Pi</h3>
+                 <div class="space-y-4">
+                    <p class="text-sm text-gray-400">Use the buttons below to open your Pi Browser and access your Pi Wallet.</p>
+                    
+                    <!-- App Launchers -->
+                    <div id="app-launchers" class="bg-gray-800 p-4 rounded-lg">
+                        <p id="launcher-title" class="text-center font-semibold mb-3">Quick App Launchers</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <a href="pi://" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
+                            <a href="pi-browser://" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
+                            <a href="gcash://" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+                        </div>
+                        <div id="pc-instructions" class="hidden mt-3 text-center text-sm text-gray-400">
+                            <p>It looks like you're on a PC. Please use your phone and install these apps to proceed.</p>
                         </div>
                     </div>
-
-                     <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">3</div>
-                        <p>After sending, complete the form below with the exact Pi amount and your GCash details.</p>
-                    </div>
-                     <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">4</div>
-                        <p>Capture a screenshot of the successful Pi transfer and send it to our <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="font-semibold text-blue-400 hover:underline">Facebook Group (PiCoinPH)</a> for reference.</p>
-                    </div>
-                     <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">5</div>
-                        <p>Wait for the admin to verify the transfer and send your payment. You can track the status in "My Transactions".</p>
+                    
+                    <div>
+                        <p>Transfer the amount of Pi you want to exchange to this exact wallet address:</p>
+                        <div class="mt-2 flex items-center bg-gray-700 p-2 rounded-md">
+                            <input id="pi-wallet-address" readonly class="bg-transparent font-mono text-base sm:text-lg w-full text-amber-400" value="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
+                            <button id="copy-address-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                            </button>
+                        </div>
+                        <p class="text-xs mt-2 text-yellow-300">Warning: Double-check the address. Use the copy button to avoid mistakes. Crypto transfers are irreversible.</p>
                     </div>
                 </div>
             </div>
-
-            <!-- App Launchers -->
-             <div id="app-launchers" class="bg-gray-800 p-4 rounded-lg">
-                <p id="launcher-title" class="text-center font-semibold mb-3">Quick App Launchers</p>
-                 <div class="grid grid-cols-3 gap-2">
-                    <a href="pi://" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
-                    <a href="pi-browser://" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
-                    <a href="gcash://" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
-                 </div>
-                 <div id="pc-instructions" class="hidden mt-3 text-center text-sm text-gray-400">
-                     <p>It looks like you're on a PC. Please use your phone and install these apps to proceed.</p>
-                     <a href="https://minepi.com/" target="_blank" class="text-blue-400 hover:underline">Learn more about Pi Network</a>
-                 </div>
-            </div>
             
-             <!-- GCash Rate Highlight -->
-            <div class="bg-gray-900/50 p-6 rounded-lg text-center border-2 border-green-500 shadow-lg">
-                <p class="text-lg font-medium text-gray-300">Direct to <span class="font-bold text-blue-500">GCASH</span> rates</p>
-                <p id="gcash-rate" class="text-5xl font-extrabold text-green-400 my-2">Loading...</p>
-                <p class="text-xs text-gray-500">Rate updated every 20 seconds. Rates auto-refresh, please wait patiently.</p>
+            <!-- GCash Rate Display -->
+            <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-lg text-center shadow-lg">
+                <h2 class="text-lg font-medium text-white flex justify-center items-baseline gap-x-1.5">
+                    <span>Direct to</span>
+                    <span class="font-bold text-blue-500 text-2xl" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.6);">GCASH</span>
+                    <span>rates</span>
+                </h2>
+                <p id="gcash-rate" class="text-6xl md:text-7xl font-black text-lime-400 my-2" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.9);">Loading...</p>
+                <p class="text-xs text-indigo-300">rates auto refresh, wait patiently</p>
             </div>
 
-            <!-- Transaction Submission Form -->
+            <!-- Step 2: Submit Transaction -->
             <div class="bg-gray-800 p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-4 text-white">Submit Your Transaction</h3>
-                <form id="transaction-form">
-                    <div class="space-y-4">
-                        <div>
-                             <label for="pi-sent" class="block text-sm font-medium text-gray-300">Amount of Pi You Sent (π)</label>
-                             <input type="number" step="any" id="pi-sent" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 text-white p-3" placeholder="e.g., 10.5">
-                        </div>
-                        <div>
-                             <label for="gcash-number" class="block text-sm font-medium text-gray-300">Your GCash Number</label>
-                             <input type="text" id="gcash-number" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-white p-3" placeholder="09171234567">
-                        </div>
-                         <div>
-                             <label for="gcash-name" class="block text-sm font-medium text-gray-300">Your GCash Name</label>
-                             <input type="text" id="gcash-name" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-white p-3" placeholder="Juan dela Cruz">
-                        </div>
-                        <div>
-                            <label for="transaction-datetime" class="block text-sm font-medium text-gray-300">Date & Time of Pi Transfer</label>
-                            <input type="datetime-local" id="transaction-datetime" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 text-white p-3">
-                        </div>
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 2: Submit Your Transaction</h3>
+                <p class="text-sm text-gray-400 mb-4">After you have sent the Pi, fill out this form to notify the admin. Payment will be sent to the GCash number you provide.</p>
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label for="pi-wallet-source" class="block text-sm font-medium text-gray-300">Your Pi Wallet Source Address</label>
+                        <input type="text" id="pi-wallet-source" name="pi-wallet-source" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
                     </div>
+                    <div>
+                        <label for="pi-sent" class="block text-sm font-medium text-gray-300">Amount of Pi You Sent (π)</label>
+                        <input type="number" id="pi-sent" name="pi-sent" step="any" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-name" class="block text-sm font-medium text-gray-300">Your Full GCash Name</label>
+                        <input type="text" id="gcash-name" name="gcash-name" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-number" class="block text-sm font-medium text-gray-300">Your GCash Number (e.g. 0917...)</label>
+                        <input type="text" id="gcash-number" name="gcash-number" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="transaction-datetime" class="block text-sm font-medium text-gray-300">Date & Time of Pi Transfer</label>
+                        <input type="datetime-local" id="transaction-datetime" name="transaction-datetime" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    
                      <button type="submit" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">I Have Sent the Pi, Submit for Verification</button>
                 </form>
             </div>
@@ -181,69 +139,100 @@
                 <p class="text-xs text-gray-400">A ₱20.00 platform fee is deducted to maintain the app and support development.</p>
             </div>
 
+             <!-- Step 3: Submit Proof -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 3: Submit Proof of Transfer</h3>
+                <p class="text-sm text-gray-400">To help verify your transaction, capture a screenshot of the successful Pi transfer and post it in our Facebook Group for reference: 
+                    <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="text-base font-bold text-orange-400 hover:underline">PiCoinPH</a>.
+                </p>
+            </div>
+
+             <!-- Step 4: Wait for Verification -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 4: Wait for Verification</h3>
+                <p class="text-sm text-gray-400">Wait for the admin to verify the transfer and send your payment. You can track the status in "My Transactions" below.</p>
+            </div>
+
 
              <!-- My Transactions -->
             <div class="bg-gray-800 p-6 rounded-lg">
                 <h3 class="text-xl font-semibold mb-4 text-white">My Transactions</h3>
                 <div id="transactions-list" class="space-y-3">
-                    <p class="text-gray-400 text-center py-4">You have no submitted transactions.</p>
+                    <!-- Transactions will be dynamically inserted here -->
+                     <p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>
                 </div>
             </div>
-
-        </div>
-
-        <!-- Pi Market Price Footer -->
-        <footer id="price-footer" class="text-center mt-6 hidden">
-            <div class="bg-gray-800/50 inline-block p-3 rounded-lg">
-                 <p class="text-xs text-gray-400">Reference Pi Live Market Price</p>
-                 <p id="pi-price" class="font-semibold text-gray-300">Loading...</p>
+            
+            <!-- Pi Price Reference -->
+            <div class="text-center py-4">
+                <p class="text-sm text-gray-400">
+                    <span class="font-bold">Pi Live Market Price:</span> 
+                    <span id="pi-price" class="font-semibold text-gray-200">Loading...</span>
+                    <span id="price-timestamp" class="text-gray-500 text-xs block"></span>
+                </p>
+                 <p class="text-xs text-gray-500">Rate updated every 20 seconds.</p>
             </div>
-        </footer>
 
+        </main>
     </div>
 
     <!-- Firebase SDK -->
     <script type="module">
         console.log("Script starting...");
-
-        // Firebase and crypto-js imports
+        // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // =================================================================================
-        // FIREBASE CONFIGURATION
+        // --- FIREBASE CONFIGURATION ---
         // =================================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyBumvw88DWTczxuIreeT6SaXGpwrs3O-rE",
             authDomain: "pi-gcash-p2p-app.firebaseapp.com",
             projectId: "pi-gcash-p2p-app",
-            storageBucket: "pi-gcash-p2p-app.firebasestorage.app",
+            storageBucket: "pi-gcash-p2p-app.appspot.com",
             messagingSenderId: "148063854165",
             appId: "1:148063854165:web:cd335ca3af278034e4fedc",
             measurementId: "G-VVG58MWN3F"
         };
-        
+        // =================================================================================
+
+        // --- INITIALIZE FIREBASE ---
+        let app, auth, db;
+        try {
+            console.log("Initializing Firebase App...");
+            app = initializeApp(firebaseConfig);
+            console.log("Firebase App Initialized.");
+            console.log("Initializing Firebase Auth...");
+            auth = getAuth(app);
+            console.log("Firebase Auth Initialized.");
+            console.log("Initializing Firebase Firestore...");
+            db = getFirestore(app);
+            console.log("Firebase Firestore Initialized.");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            document.getElementById('loading-view').textContent = 'Error: Could not connect to services. Please refresh.';
+        }
+
         // --- STATE MANAGEMENT ---
         let user = null;
         let piPrice = 0;
         let currentGcashRate = 0;
-        let db; // To hold Firestore instance
+        let transactionsUnsubscribe = null;
 
         // --- UI ELEMENT REFERENCES ---
         const views = {
             loading: document.getElementById('loading-view'),
             login: document.getElementById('login-view'),
             fbGate: document.getElementById('fb-gate-view'),
-            mainApp: document.getElementById('main-app-view')
+            main: document.getElementById('main-view'),
         };
         const appHeader = document.getElementById('app-header');
-        const priceFooter = document.getElementById('price-footer');
-        const userInfo = document.getElementById('user-info');
-        const googleLoginBtn = document.getElementById('google-login-btn');
-        const facebookLoginBtn = document.getElementById('facebook-login-btn');
-        const fbConfirmBtn = document.getElementById('fb-confirm-btn');
+        const userInfoEl = document.getElementById('user-info');
+        const loginBtn = document.getElementById('login-btn');
+        const fbContinueBtn = document.getElementById('fb-continue-btn');
         const piPriceEl = document.getElementById('pi-price');
+        const priceTimestampEl = document.getElementById('price-timestamp');
         const gcashRateEl = document.getElementById('gcash-rate');
         const copyAddressBtn = document.getElementById('copy-address-btn');
         const transactionForm = document.getElementById('transaction-form');
@@ -253,84 +242,17 @@
         const pcInstructions = document.getElementById('pc-instructions');
 
         // --- VIEW MANAGEMENT ---
-        const showView = (viewName) => {
+        function showView(viewName) {
             Object.values(views).forEach(view => view.classList.add('hidden'));
             if (views[viewName]) {
                 views[viewName].classList.remove('hidden');
             }
-        };
-
-        // --- INITIALIZATION ---
-        try {
-            console.log("Initializing Firebase App...");
-            const app = initializeApp(firebaseConfig);
-            console.log("Firebase App Initialized.");
-
-            const auth = getAuth(app);
-            console.log("Firebase Auth Initialized.");
-
-            db = getFirestore(app);
-            console.log("Firebase Firestore Initialized.");
-
-            console.log("Setting up Auth State Changed listener...");
-            onAuthStateChanged(auth, (currentUser) => {
-                console.log("Auth State Changed. User:", currentUser);
-                user = currentUser;
-                views.loading.classList.add('hidden'); 
-                
-                const showMainApp = () => {
-                    showView('mainApp');
-                    appHeader.classList.remove('hidden');
-                    priceFooter.classList.remove('hidden');
-                    userInfo.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 text-red-400 hover:underline">Logout</button>`;
-                    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                    fetchUserTransactions();
-                };
-                
-                const showLogin = () => {
-                    showView('login');
-                    appHeader.classList.add('hidden');
-                    priceFooter.classList.add('hidden');
-                }
-
-                if (user) {
-                    const hasJoinedFB = localStorage.getItem('hasJoinedFBGroup');
-                    if(hasJoinedFB) {
-                        showMainApp();
-                    } else {
-                        showView('fbGate');
-                    }
-                } else {
-                    showLogin();
-                }
-            });
-            console.log("Auth listener set up.");
-
-            // --- EVENT LISTENERS ---
-            googleLoginBtn.addEventListener('click', () => handleLogin(new GoogleAuthProvider(), auth));
-            facebookLoginBtn.addEventListener('click', () => handleLogin(new FacebookAuthProvider(), auth));
-            fbConfirmBtn.addEventListener('click', () => {
-                localStorage.setItem('hasJoinedFBGroup', 'true');
-                if (user) {
-                   onAuthStateChanged(auth, u => u); // re-trigger auth check
-                }
-            });
-
-            copyAddressBtn.addEventListener('click', handleCopyAddress);
-            transactionForm.addEventListener('submit', handleSubmitTransaction);
-            piSentInput.addEventListener('input', calculateExpectedPayment);
-            
-            if (!/Mobi|Android/i.test(navigator.userAgent)) {
-                pcInstructions.classList.remove('hidden');
-            }
-
-        } catch (error) {
-            console.error("Critical Initialization Error:", error);
-            views.loading.innerHTML = `<p class="text-red-500">A critical error occurred. Please check the console and refresh.</p>`;
+            appHeader.classList.toggle('hidden', viewName !== 'main');
         }
-        
-        // --- FUNCTIONS ---
-        async function handleLogin(provider, auth) {
+
+        // --- EVENT HANDLERS ---
+        async function handleLogin() {
+            const provider = new GoogleAuthProvider();
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
@@ -339,40 +261,44 @@
             }
         }
 
+        function handleLogout() {
+            signOut(auth);
+        }
+
+        function handleCopyAddress() {
+            const address = document.getElementById('pi-wallet-address').value;
+            navigator.clipboard.writeText(address).then(() => {
+                alert("Pi Wallet Address copied to clipboard!");
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+        
         async function fetchPiPrice() {
             console.log("Fetching Pi price...");
             try {
                 const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pi-network-iou&vs_currencies=php');
-                if (!response.ok) throw new Error('Network response was not ok.');
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
                 const data = await response.json();
                 
                 if (data && data['pi-network-iou'] && data['pi-network-iou'].php) {
                     piPrice = data['pi-network-iou'].php;
                     currentGcashRate = Math.floor(piPrice * 0.70); // Round down to nearest whole number
+                    const timestamp = new Date().toLocaleString();
 
                     piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
+                    priceTimestampEl.textContent = `as of ${timestamp}`;
                     gcashRateEl.textContent = `₱${currentGcashRate}`; // Display without decimals
                     calculateExpectedPayment(); // Recalculate if the rate changes
                     console.log(`Pi price updated: ${piPrice}`);
                 } else {
                     throw new Error("API did not return valid Pi price data.");
                 }
-
             } catch (error) {
-                console.error("Failed to fetch Pi price:", error);
-                piPriceEl.textContent = "Unavailable";
-                gcashRateEl.textContent = "Unavailable";
+                console.error("Could not fetch Pi price:", error);
+                piPriceEl.textContent = 'Unavailable';
+                gcashRateEl.textContent = 'Unavailable';
             }
-        }
-
-        function handleCopyAddress() {
-            const addressInput = document.getElementById('pi-wallet-address');
-            addressInput.select();
-            document.execCommand('copy');
-            copyAddressBtn.innerHTML = 'Copied!';
-            setTimeout(() => {
-                copyAddressBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>`;
-            }, 1500);
         }
 
         function calculateExpectedPayment() {
@@ -394,7 +320,6 @@
             }
         }
 
-
         async function handleSubmitTransaction(e) {
             e.preventDefault();
             if (!user) {
@@ -402,77 +327,123 @@
                 return;
             }
 
-            const piSent = document.getElementById('pi-sent').value;
-            const gcashNumber = document.getElementById('gcash-number').value;
-            const gcashName = document.getElementById('gcash-name').value;
-            const transactionDateTime = document.getElementById('transaction-datetime').value;
-
-            if (!piSent || !gcashNumber || !gcashName || !transactionDateTime) {
-                alert("Please fill out all fields, including the date and time of the transfer.");
-                return;
-            }
+            const formData = new FormData(e.target);
+            const transactionData = {
+                userId: user.uid,
+                userEmail: user.email,
+                piSent: parseFloat(formData.get('pi-sent')),
+                gcashName: formData.get('gcash-name'),
+                gcashNumber: formData.get('gcash-number'),
+                piWalletSource: formData.get('pi-wallet-source'),
+                transactionTime: new Date(formData.get('transaction-datetime')),
+                status: 'Pending Verification',
+                createdAt: serverTimestamp()
+            };
 
             try {
-                const gcashRateOnSubmit = Math.floor(piPrice * 0.70);
-                const docRef = await addDoc(collection(db, "transactions"), {
-                    userId: user.uid,
-                    userEmail: user.email,
-                    userName: user.displayName,
-                    piAmount: Number(piSent),
-                    gcashNumber: gcashNumber,
-                    gcashName: gcashName,
-                    transactionDateTime: transactionDateTime,
-                    status: "pending_verification", // pending_verification, paid, rejected
-                    submittedAt: serverTimestamp(),
-                    exchangeRate: gcashRateOnSubmit // Use the floored rate
-                });
+                const docRef = await addDoc(collection(db, "transactions"), transactionData);
                 console.log("Transaction submitted with ID: ", docRef.id);
-                transactionForm.reset();
                 alert("Transaction submitted successfully! The admin will now verify it.");
+                e.target.reset();
+                calculateExpectedPayment();
             } catch (error) {
-                console.error("Error submitting transaction: ", error);
-                alert("There was an error submitting your transaction. Please try again.");
+                console.error("Error adding document: ", error);
+                alert(`Error submitting transaction: ${error.message}`);
             }
         }
-
-        function fetchUserTransactions() {
+        
+        function listenForTransactions() {
+             if (transactionsUnsubscribe) {
+                transactionsUnsubscribe(); // Stop any previous listener
+            }
             if (!user) return;
-            const q = query(collection(db, "transactions"), where("userId", "==", user.uid));
-
-            onSnapshot(q, (querySnapshot) => {
+            
+            console.log("Setting up Firestore listener for user:", user.uid);
+            const q = query(collection(db, "transactions"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+            
+            transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                console.log("Received transaction update from Firestore.");
+                transactionsList.innerHTML = ''; // Clear current list
                 if (querySnapshot.empty) {
-                    transactionsList.innerHTML = `<p class="text-gray-400 text-center py-4">You have no submitted transactions.</p>`;
+                    transactionsList.innerHTML = `<p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>`;
                     return;
                 }
-                
-                transactionsList.innerHTML = ''; // Clear list
                 querySnapshot.forEach((doc) => {
                     const tx = doc.data();
-                    const date = tx.submittedAt ? tx.submittedAt.toDate().toLocaleString() : 'Just now';
+                    const date = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'Just now';
                     
                     let statusColor = 'text-yellow-400';
-                    if (tx.status === 'paid') statusColor = 'text-green-400';
-                    if (tx.status === 'rejected') statusColor = 'text-red-400';
+                    if (tx.status === 'Paid') statusColor = 'text-green-400';
+                    if (tx.status === 'Rejected') statusColor = 'text-red-400';
 
                     const txElement = document.createElement('div');
-                    txElement.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
+                    txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
                     txElement.innerHTML = `
-                        <div>
-                            <p class="font-bold">${tx.piAmount} π to ${tx.gcashNumber}</p>
-                            <p class="text-xs text-gray-400">${date}</p>
+                        <div class="flex justify-between items-center">
+                            <p class="font-bold">Sent ${tx.piSent}π</p>
+                            <p class="${statusColor} font-semibold">${tx.status}</p>
                         </div>
-                        <p class="font-semibold capitalize ${statusColor}">${tx.status.replace('_', ' ')}</p>
+                        <p class="text-xs text-gray-400">GCash: ${tx.gcashNumber}</p>
+                        <p class="text-xs text-gray-500 mt-1">${date}</p>
                     `;
                     transactionsList.appendChild(txElement);
                 });
+            }, (error) => {
+                 console.error("Error listening to transactions: ", error);
             });
         }
 
 
-        // --- START THE APP ---
-        fetchPiPrice(); // Fetch price on initial load
-        // Set an interval to refresh the price every 20 seconds
-        setInterval(fetchPiPrice, 20000);
+        // --- MAIN INITIALIZATION ---
+        function initApp() {
+            console.log("Setting up Auth State Changed listener...");
+            onAuthStateChanged(auth, (currentUser) => {
+                console.log("Auth State Changed. User:", currentUser ? currentUser.uid : 'null');
+                user = currentUser;
+                if (user) {
+                    // Check if user has passed FB gate
+                    if (localStorage.getItem('fb_gate_passed') === 'true') {
+                        userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
+                        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                        showView('main');
+                        fetchPiPrice();
+                        setInterval(fetchPiPrice, 20000); // Update price every 20 seconds
+                        listenForTransactions();
+                    } else {
+                        showView('fbGate');
+                    }
+                } else {
+                    if (transactionsUnsubscribe) transactionsUnsubscribe();
+                    showView('login');
+                }
+            });
+             console.log("Auth listener set up.");
+
+            loginBtn.addEventListener('click', handleLogin);
+            
+            fbContinueBtn.addEventListener('click', () => {
+                localStorage.setItem('fb_gate_passed', 'true');
+                // Manually re-trigger the auth state logic
+                onAuthStateChanged(auth, u => { if(u) {
+                    userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
+                    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                    showView('main');
+                    fetchPiPrice();
+                    setInterval(fetchPiPrice, 20000); 
+                    listenForTransactions();
+                }});
+            });
+
+            copyAddressBtn.addEventListener('click', handleCopyAddress);
+            transactionForm.addEventListener('submit', handleSubmitTransaction);
+            piSentInput.addEventListener('input', calculateExpectedPayment);
+            
+            if (!/Mobi|Android/i.test(navigator.userAgent)) {
+                pcInstructions.classList.remove('hidden');
+            }
+        }
+
+        initApp();
 
     </script>
 </body>
