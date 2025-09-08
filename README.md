@@ -98,7 +98,7 @@
   4.  **Transact:** Follow the clear, step-by-step instructions on the main app screen.
 
   For more projects and updates, feel free to visit my official GitHub page:
-  **[https://github.com/randysbondoc](https://github.com/randysbondoc)**
+  **(https://randybondoc.github.io/Pi2GCash/)**
 
   ---
 
