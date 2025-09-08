@@ -81,9 +81,9 @@
                     <div id="app-launchers" class="bg-gray-800 p-4 rounded-lg">
                         <p id="launcher-title" class="text-center font-semibold mb-3">Quick App Launchers</p>
                         <div class="grid grid-cols-3 gap-2">
-                            <a href="pi://" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
-                            <a href="pi-browser://" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
-                            <a href="gcash://" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+                            <a href="intent://#Intent;scheme=pi;package=com.blockchaincommons.pinetwork;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
+                            <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
+                            <a href="intent://#Intent;scheme=gcash;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
                         </div>
                         <div id="pc-instructions" class="hidden mt-3 text-center text-sm text-gray-400">
                             <p>It looks like you're on a PC. Please use your phone and install these apps to proceed.</p>
@@ -194,7 +194,7 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION ---
         // =================================================================================
@@ -231,6 +231,7 @@
         let piPrice = 0;
         let currentGcashRate = 0;
         let transactionsUnsubscribe = null;
+        let priceUnsubscribe = null; // To hold the price listener
 
         // --- UI ELEMENT REFERENCES ---
         const views = {
@@ -290,31 +291,38 @@
             });
         }
         
-        async function fetchPiPrice() {
-            console.log("Fetching Pi price...");
-            try {
-                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pi-network-iou&vs_currencies=php');
-                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-                const data = await response.json();
-                
-                if (data && data['pi-network-iou'] && data['pi-network-iou'].php) {
-                    piPrice = data['pi-network-iou'].php;
-                    currentGcashRate = Math.floor(piPrice * 0.70); // Round down to nearest whole number
-                    const timestamp = new Date().toLocaleString();
+        // DEPRECATED: We no longer call a function directly.
+        // async function fetchPiPrice() { ... }
+
+        // NEW: Listen for price changes from Firestore in real-time
+        function listenForPriceChanges() {
+            if (priceUnsubscribe) priceUnsubscribe(); // Stop any previous listener
+
+            console.log("Setting up Firestore listener for Pi Price...");
+            const priceDocRef = doc(db, "marketData", "piPrice");
+
+            priceUnsubscribe = onSnapshot(priceDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    piPrice = data.price;
+                    currentGcashRate = Math.floor(piPrice * 0.70);
+                    const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
 
                     piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
                     priceTimestampEl.textContent = `as of ${timestamp}`;
-                    gcashRateEl.textContent = `₱${currentGcashRate}`; // Display without decimals
-                    calculateExpectedPayment(); // Recalculate if the rate changes
-                    console.log(`Pi price updated: ${piPrice}`);
+                    gcashRateEl.textContent = `₱${currentGcashRate}`;
+                    calculateExpectedPayment();
+                    console.log(`Real-time price update from Firestore: ${piPrice}`);
                 } else {
-                    throw new Error("API did not return valid Pi price data.");
+                    console.log("Price document does not exist yet.");
+                    piPriceEl.textContent = 'Waiting for data...';
+                    gcashRateEl.textContent = 'Waiting...';
                 }
-            } catch (error) {
-                console.error("Could not fetch Pi price:", error);
+            }, (error) => {
+                console.error("Error listening to price changes:", error);
                 piPriceEl.textContent = 'Unavailable';
                 gcashRateEl.textContent = 'Unavailable';
-            }
+            });
         }
 
         function calculateExpectedPayment() {
@@ -422,14 +430,14 @@
                         userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
                         document.getElementById('logout-btn').addEventListener('click', handleLogout);
                         showView('main');
-                        fetchPiPrice();
-                        setInterval(fetchPiPrice, 20000); // Update price every 20 seconds
+                        listenForPriceChanges(); // Start listening for price updates
                         listenForTransactions();
                     } else {
                         showView('fbGate');
                     }
                 } else {
                     if (transactionsUnsubscribe) transactionsUnsubscribe();
+                    if (priceUnsubscribe) priceUnsubscribe(); // Stop listening to price on logout
                     showView('login');
                 }
             });
@@ -444,8 +452,7 @@
                     userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
                     document.getElementById('logout-btn').addEventListener('click', handleLogout);
                     showView('main');
-                    fetchPiPrice();
-                    setInterval(fetchPiPrice, 20000); 
+                    listenForPriceChanges();
                     listenForTransactions();
                 }});
             });
@@ -468,4 +475,5 @@
     </script>
 </body>
 </html>
+
 
