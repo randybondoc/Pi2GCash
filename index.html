@@ -132,6 +132,10 @@
                 <p class="text-sm text-gray-400 mb-4">After you have sent the Pi, fill out this form to notify the admin. Payment will be sent to the GCash number you provide.</p>
                 <form id="transaction-form" class="space-y-4">
                     <div>
+                        <label for="transaction-id-display" class="block text-sm font-medium text-gray-300">Your Unique Transaction ID</label>
+                        <input type="text" id="transaction-id-display" name="transaction-id-display" readonly class="mt-1 block w-full bg-gray-700/50 border-gray-600 rounded-md shadow-sm text-purple-400 font-mono text-center sm:text-sm p-3">
+                    </div>
+                    <div>
                         <label for="pi-wallet-source" class="block text-sm font-medium text-gray-300">Your Pi Wallet Source Address</label>
                         <input type="text" id="pi-wallet-source" name="pi-wallet-source" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
                     </div>
@@ -154,17 +158,6 @@
                     
                      <button type="submit" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">I Have Sent the Pi, Submit for Verification</button>
                 </form>
-                
-                <div id="transaction-id-container" class="hidden mt-6 text-center bg-gray-900/50 p-4 rounded-lg">
-                    <p class="text-sm text-gray-400">Transaction Submitted! Your Reference ID:</p>
-                    <div class="flex items-center justify-center bg-gray-700 p-2 rounded-md mt-2">
-                        <input id="transaction-id-display" readonly class="bg-transparent font-mono text-lg w-auto text-center text-purple-400">
-                        <button id="copy-tx-id-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
-                        </button>
-                    </div>
-                </div>
-
             </div>
 
             <div class="bg-gray-900/50 p-6 rounded-lg text-center border border-purple-500">
@@ -275,9 +268,8 @@
         const expectedPaymentEl = document.getElementById('expected-payment-el');
         const transactionsList = document.getElementById('transactions-list');
         const pcInstructions = document.getElementById('pc-instructions');
-        const txIdContainer = document.getElementById('transaction-id-container');
         const txIdDisplay = document.getElementById('transaction-id-display');
-        const copyTxIdBtn = document.getElementById('copy-tx-id-btn');
+        
 
         // --- VIEW MANAGEMENT ---
         function showView(viewName) {
@@ -307,10 +299,9 @@
             signOut(auth);
         }
 
-        function handleCopyAddress() {
-            const address = document.getElementById('pi-wallet-address').value;
-            navigator.clipboard.writeText(address).then(() => {
-                alert("Pi Wallet Address copied to clipboard!");
+        function handleCopy(textToCopy, message) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert(message);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
             });
@@ -318,7 +309,7 @@
         
         // NEW: Listen for price changes from Firestore in real-time
         function listenForPriceChanges() {
-            if (priceUnsubscribe) priceUnsubscribe(); // Stop any previous listener
+            if (priceUnsubscribe) priceUnsubscribe();
 
             console.log("Setting up Firestore listener for Pi Price...");
             const priceDocRef = doc(db, "marketData", "piPrice");
@@ -380,10 +371,10 @@
             }
 
             const formData = new FormData(e.target);
-            const transactionId = generateTransactionId(); // Generate the unique ID
+            const transactionId = formData.get('transaction-id-display'); // Get ID from the form field
 
             const transactionData = {
-                transactionId: transactionId, // Add ID to the data
+                transactionId: transactionId,
                 userId: user.uid,
                 userEmail: user.email,
                 piSent: parseFloat(formData.get('pi-sent')),
@@ -400,11 +391,8 @@
                 console.log("Transaction submitted with ID: ", transactionId);
                 alert("Transaction submitted successfully! Your Reference ID is " + transactionId);
                 
-                // Show the transaction ID to the user
-                txIdDisplay.value = transactionId;
-                txIdContainer.classList.remove('hidden');
-
-                e.target.reset();
+                e.target.reset(); // Reset form fields
+                txIdDisplay.value = ''; // Clear the TX ID display
                 calculateExpectedPayment();
             } catch (error) {
                 console.error("Error adding document: ", error);
@@ -413,9 +401,7 @@
         }
         
         function listenForTransactions() {
-             if (transactionsUnsubscribe) {
-                transactionsUnsubscribe(); // Stop any previous listener
-            }
+             if (transactionsUnsubscribe) transactionsUnsubscribe();
             if (!user) return;
             
             console.log("Setting up Firestore listener for user:", user.uid);
@@ -423,7 +409,7 @@
             
             transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
                 console.log("Received transaction update from Firestore.");
-                transactionsList.innerHTML = ''; // Clear current list
+                transactionsList.innerHTML = '';
                 if (querySnapshot.empty) {
                     transactionsList.innerHTML = `<p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>`;
                     return;
@@ -457,67 +443,56 @@
 
         // --- MAIN INITIALIZATION ---
         function initApp() {
-            console.log("Setting up Auth State Changed listener...");
             onAuthStateChanged(auth, (currentUser) => {
-                console.log("Auth State Changed. User:", currentUser ? currentUser.uid : 'null');
                 user = currentUser;
-                txIdContainer.classList.add('hidden'); // Hide TX ID on login/logout
-
                 if (user) {
-                    // Check if user has passed FB gate
                     if (localStorage.getItem('fb_gate_passed') === 'true') {
-                        userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
+                        userInfoEl.innerHTML = `
+                            <span>${user.displayName} (${user.email})</span>
+                            <div class="flex items-center justify-center mt-1">
+                                <span class="text-xs text-gray-400 mr-1">User ID:</span>
+                                <span class="font-mono text-yellow-400 text-xs">${user.uid}</span>
+                                <button id="copy-user-id-btn" class="ml-2 text-gray-400 hover:text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                                </button>
+                                <button id="logout-btn" class="ml-4 text-red-500 hover:text-red-400 font-bold">Logout</button>
+                            </div>
+                        `;
                         document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                        document.getElementById('copy-user-id-btn').addEventListener('click', () => handleCopy(user.uid, 'User ID copied!'));
                         showView('main');
-                        listenForPriceChanges(); // Start listening for price updates
+                        listenForPriceChanges();
                         listenForTransactions();
                     } else {
                         showView('fbGate');
                     }
                 } else {
                     if (transactionsUnsubscribe) transactionsUnsubscribe();
-                    if (priceUnsubscribe) priceUnsubscribe(); // Stop listening to price on logout
+                    if (priceUnsubscribe) priceUnsubscribe();
                     showView('login');
                 }
             });
-             console.log("Auth listener set up.");
 
             loginBtn.addEventListener('click', handleLogin);
-            
             fbContinueBtn.addEventListener('click', () => {
                 localStorage.setItem('fb_gate_passed', 'true');
-                // Manually re-trigger the auth state logic
-                onAuthStateChanged(auth, u => { if(u) {
-                    userInfoEl.innerHTML = `Signed in as ${user.displayName} (${user.email}) <button id="logout-btn" class="ml-2 underline hover:text-white">Logout</button>`;
-                    document.getElementById('logout-btn').addEventListener('click', handleLogout);
-                    showView('main');
-                    listenForPriceChanges();
-                    listenForTransactions();
-                }});
+                onAuthStateChanged(auth, u => u);
             });
-
-            copyAddressBtn.addEventListener('click', handleCopyAddress);
+            copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             piSentInput.addEventListener('input', calculateExpectedPayment);
-            copyTxIdBtn.addEventListener('click', () => {
-                const txId = txIdDisplay.value;
-                navigator.clipboard.writeText(txId).then(() => {
-                    alert(`Transaction ID ${txId} copied to clipboard!`);
-                }).catch(err => {
-                    console.error('Failed to copy TX ID: ', err);
-                });
+            transactionForm.addEventListener('focusin', () => {
+                if (!txIdDisplay.value) {
+                    txIdDisplay.value = generateTransactionId();
+                }
             });
             
             if (!/Mobi|Android/i.test(navigator.userAgent)) {
                 pcInstructions.classList.remove('hidden');
             }
         }
-
-        // --- DOMContentLoaded Wrapper ---
-        document.addEventListener('DOMContentLoaded', () => {
-             // This ensures all HTML elements are loaded before the script tries to access them.
-             initApp();
-        });
+        
+        document.addEventListener('DOMContentLoaded', initApp);
 
     </script>
 </body>
