@@ -23,38 +23,50 @@
 
         <!-- Header -->
         <header id="app-header" class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
-             <div class="flex items-center justify-center space-x-4">
-                <h1 class="text-3xl md:text-4xl font-bold">
-                    <span class="text-yellow-400">Pi</span> <span class="text-gray-200">to</span>
-                    <span class="text-blue-500">GCash</span>
-                    <span class="text-gray-200">Exchange</span>
+             <div class="flex items-center justify-center space-x-3">
+                <div class="w-12 h-12">
+                    <!-- SVG Logo Code -->
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path>
+                        <path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold">
+                    <span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span>
                 </h1>
-             </div>
+            </div>
             <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
         </header>
 
-        <!-- Loading Screen -->
+        <!-- Loading View -->
         <div id="loading-view" class="text-center py-20">
             <p>Initializing Secure Connection...</p>
         </div>
 
-        <!-- Login Screen -->
+        <!-- Login View -->
         <div id="login-view" class="hidden text-center py-20">
-            <h2 class="text-2xl font-bold mb-4">Welcome</h2>
-            <p class="mb-6">Please sign in to continue.</p>
-            <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Sign in with Google</button>
+            <div class="flex items-center justify-center space-x-3 mb-4">
+                 <div class="w-16 h-16">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path><path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path></svg>
+                </div>
+                <h1 class="text-4xl font-bold"><span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span></h1>
+            </div>
+            <p class="mb-6 text-gray-400">Securely sign in to start your transaction.</p>
+            <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 398.8 0 256S110.3 0 244 0c73 0 134.3 29.2 179.8 73.4L372.3 128.9C339.7 99.8 296.2 80 244 80c-87.6 0-159.3 70.2-159.3 176s71.7 176 159.3 176c98.2 0 135-70.4 140.8-106.9H244v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.8z"></path></svg>
+                Sign in with Google
+            </button>
         </div>
-        
-        <!-- FB Group Gate Screen -->
-        <div id="fb-gate-view" class="hidden text-center py-16 bg-gray-800 rounded-lg p-6">
-            <h2 class="text-2xl font-bold mb-4">One More Step!</h2>
-            <p class="mb-6 text-gray-300">To ensure a safe community, all users are required to join our official Facebook group before transacting.</p>
-            <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mb-4 transition">
-                Join Facebook Group
-            </a>
-            <p class="text-sm text-gray-400 mb-6">After joining, come back here and click the button below.</p>
-            <button id="fb-continue-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">I Have Joined the Group, Continue to App</button>
+
+        <!-- Facebook Gate View -->
+        <div id="fb-gate-view" class="hidden bg-gray-800 p-8 rounded-lg text-center">
+             <h2 class="text-2xl font-bold mb-4">One Final Step!</h2>
+             <p class="text-gray-400 mb-6">For community and security, please join our official Facebook group before proceeding. This helps ensure all users are real people.</p>
+             <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="block w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-lg mb-4">Join the PiCoinPH Facebook Group</a>
+             <p class="text-gray-500 text-sm mb-6">After joining, click the button below to continue to the app.</p>
+             <button id="fb-continue-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">I Have Joined, Continue to App</button>
         </div>
+
 
         <!-- Main Content -->
         <main id="main-view" class="hidden space-y-6">
@@ -243,11 +255,15 @@
 
         // --- VIEW MANAGEMENT ---
         function showView(viewName) {
-            Object.values(views).forEach(view => view.classList.add('hidden'));
+            Object.values(views).forEach(view => {
+                if (view) view.classList.add('hidden');
+            });
             if (views[viewName]) {
                 views[viewName].classList.remove('hidden');
             }
-            appHeader.classList.toggle('hidden', viewName !== 'main');
+            if (appHeader) {
+                appHeader.classList.toggle('hidden', viewName !== 'main');
+            }
         }
 
         // --- EVENT HANDLERS ---
@@ -443,8 +459,13 @@
             }
         }
 
-        initApp();
+        // --- DOMContentLoaded Wrapper ---
+        document.addEventListener('DOMContentLoaded', () => {
+             // This ensures all HTML elements are loaded before the script tries to access them.
+             initApp();
+        });
 
     </script>
 </body>
 </html>
+
