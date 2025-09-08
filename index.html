@@ -154,6 +154,17 @@
                     
                      <button type="submit" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">I Have Sent the Pi, Submit for Verification</button>
                 </form>
+                
+                <div id="transaction-id-container" class="hidden mt-6 text-center bg-gray-900/50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-400">Transaction Submitted! Your Reference ID:</p>
+                    <div class="flex items-center justify-center bg-gray-700 p-2 rounded-md mt-2">
+                        <input id="transaction-id-display" readonly class="bg-transparent font-mono text-lg w-auto text-center text-purple-400">
+                        <button id="copy-tx-id-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             <div class="bg-gray-900/50 p-6 rounded-lg text-center border border-purple-500">
@@ -264,6 +275,9 @@
         const expectedPaymentEl = document.getElementById('expected-payment-el');
         const transactionsList = document.getElementById('transactions-list');
         const pcInstructions = document.getElementById('pc-instructions');
+        const txIdContainer = document.getElementById('transaction-id-container');
+        const txIdDisplay = document.getElementById('transaction-id-display');
+        const copyTxIdBtn = document.getElementById('copy-tx-id-btn');
 
         // --- VIEW MANAGEMENT ---
         function showView(viewName) {
@@ -302,9 +316,6 @@
             });
         }
         
-        // DEPRECATED: We no longer call a function directly.
-        // async function fetchPiPrice() { ... }
-
         // NEW: Listen for price changes from Firestore in real-time
         function listenForPriceChanges() {
             if (priceUnsubscribe) priceUnsubscribe(); // Stop any previous listener
@@ -354,6 +365,12 @@
                 expectedPaymentEl.classList.remove('text-red-500');
             }
         }
+        
+        function generateTransactionId() {
+            const prefix = 'P2G-';
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            return `${prefix}${randomPart}`;
+        }
 
         async function handleSubmitTransaction(e) {
             e.preventDefault();
@@ -363,7 +380,10 @@
             }
 
             const formData = new FormData(e.target);
+            const transactionId = generateTransactionId(); // Generate the unique ID
+
             const transactionData = {
+                transactionId: transactionId, // Add ID to the data
                 userId: user.uid,
                 userEmail: user.email,
                 piSent: parseFloat(formData.get('pi-sent')),
@@ -377,8 +397,13 @@
 
             try {
                 const docRef = await addDoc(collection(db, "transactions"), transactionData);
-                console.log("Transaction submitted with ID: ", docRef.id);
-                alert("Transaction submitted successfully! The admin will now verify it.");
+                console.log("Transaction submitted with ID: ", transactionId);
+                alert("Transaction submitted successfully! Your Reference ID is " + transactionId);
+                
+                // Show the transaction ID to the user
+                txIdDisplay.value = transactionId;
+                txIdContainer.classList.remove('hidden');
+
                 e.target.reset();
                 calculateExpectedPayment();
             } catch (error) {
@@ -414,11 +439,12 @@
                     const txElement = document.createElement('div');
                     txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
                     txElement.innerHTML = `
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center mb-1">
                             <p class="font-bold">Sent ${tx.piSent}π</p>
                             <p class="${statusColor} font-semibold">${tx.status}</p>
                         </div>
                         <p class="text-xs text-gray-400">GCash: ${tx.gcashNumber}</p>
+                        <p class="text-xs text-purple-300 font-mono">ID: ${tx.transactionId || 'N/A'}</p>
                         <p class="text-xs text-gray-500 mt-1">${date}</p>
                     `;
                     transactionsList.appendChild(txElement);
@@ -435,6 +461,8 @@
             onAuthStateChanged(auth, (currentUser) => {
                 console.log("Auth State Changed. User:", currentUser ? currentUser.uid : 'null');
                 user = currentUser;
+                txIdContainer.classList.add('hidden'); // Hide TX ID on login/logout
+
                 if (user) {
                     // Check if user has passed FB gate
                     if (localStorage.getItem('fb_gate_passed') === 'true') {
@@ -471,6 +499,14 @@
             copyAddressBtn.addEventListener('click', handleCopyAddress);
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             piSentInput.addEventListener('input', calculateExpectedPayment);
+            copyTxIdBtn.addEventListener('click', () => {
+                const txId = txIdDisplay.value;
+                navigator.clipboard.writeText(txId).then(() => {
+                    alert(`Transaction ID ${txId} copied to clipboard!`);
+                }).catch(err => {
+                    console.error('Failed to copy TX ID: ', err);
+                });
+            });
             
             if (!/Mobi|Android/i.test(navigator.userAgent)) {
                 pcInstructions.classList.remove('hidden');
