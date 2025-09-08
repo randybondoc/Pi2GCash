@@ -1,13 +1,7 @@
 <div align="center">
   <br>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://i.imgur.com/your-dark-logo.png">
-    <img width="150" src="https://i.imgur.com/your-light-logo.png">
-  </picture>
-  <h1>
-    <span style="color: #FBBF24;">Pi</span><span style="color: #E5E7EB;">2</span><span style="color: #3B82F6;">GCash</span>
-  </h1>
-  <p>A secure and reliable bridge to exchange your Pi coins for Philippine Pesos (PHP) via GCash.</p>
+  <img src="pi2gc-logo.png" alt="Pi2GCash Logo" width="600">
+  <br>
 </div>
 
 ---
@@ -98,7 +92,7 @@
   4.  **Transact:** Follow the clear, step-by-step instructions on the main app screen.
 
   For more projects and updates, feel free to visit my official GitHub page:
-  **(https://randybondoc.github.io/Pi2GCash/)**
+  **[https://github.com/randysbondoc](https://github.com/randysbondoc)**
 
   ---
 
