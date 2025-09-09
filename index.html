@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, September 9, 2025 at 7:40 PM PST
+    Timestamp: Tuesday, September 9, 2025 at 9:04 PM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,9 +7,11 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Corrected a critical regression bug. A JavaScript syntax error (missing '{}' braces in the 'handleLogin' function's catch block) that was fixed in a previous version was accidentally re-introduced in the last update.
-    - This version restores the correct syntax for the 'handleLogin' function, which resolves the 'Uncaught SyntaxError' and allows the app to launch correctly.
-    - This version also retains the improved user info header layout with the centered logout button from the previous update.
+    - Implemented a professional, non-intrusive "toast" notification system to replace all disruptive browser 'alert()' popups.
+    - Added a new <div> element to the HTML body to serve as a container for the notifications.
+    - Added custom CSS within the <style> tags for the appearance and slide-in/slide-out animations of the toast messages.
+    - Created a new JavaScript function called 'showToast(message, type)' which dynamically creates and manages the notifications. It can show different styles for 'success' (green) and 'error' (red) messages.
+    - Replaced every instance of 'alert()' in the JavaScript with a call to the new 'showToast()' function, providing a much cleaner and more modern user experience.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -24,11 +26,45 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         .backdrop-blur-sm { backdrop-filter: blur(4px); }
+        
+        /* --- Toast Notification Styles --- */
+        #toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .toast {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            animation: slideIn 0.3s ease-out forwards, slideOut 0.3s ease-in 3.2s forwards;
+            max-width: 320px;
+        }
+        .toast.success { background-color: #16a34a; } /* bg-green-600 */
+        .toast.error { background-color: #dc2626; } /* bg-red-600 */
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
     </style>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1048178550469494"
      crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-900 text-gray-200">
+
+    <!-- Container for Toast Notifications -->
+    <div id="toast-container"></div>
 
     <!-- The initial loading view, now a full-screen overlay -->
     <div id="loading-view" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900">
@@ -283,6 +319,19 @@
         const transactionsList = document.getElementById('transactions-list');
         const pcInstructions = document.getElementById('pc-instructions');
         
+        // --- TOAST NOTIFICATION FUNCTION ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3500); // Remove toast after 3.5 seconds
+        }
+
         // --- VIEW MANAGEMENT ---
         function showView(viewName) {
             Object.values(views).forEach(view => {
@@ -325,7 +374,7 @@
                 await signInWithPopup(auth, provider);
             } catch (error) {
                 console.error("Login failed:", error);
-                alert(`Login failed: ${error.message}`);
+                showToast(`Login failed: ${error.message}`, 'error');
             }
         }
 
@@ -335,9 +384,10 @@
 
         function handleCopy(textToCopy, message) {
             navigator.clipboard.writeText(textToCopy).then(() => {
-                alert(message);
+                showToast(message);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
+                showToast('Failed to copy text.', 'error');
             });
         }
         
@@ -393,7 +443,7 @@
         async function handleSubmitTransaction(e) {
             e.preventDefault();
             if (!user) {
-                alert("You must be logged in to submit a transaction.");
+                showToast("You must be logged in to submit a transaction.", 'error');
                 return;
             }
 
@@ -421,13 +471,13 @@
                 await setDoc(newTransactionRef, transactionData);
 
                 console.log("Transaction submitted with ID: ", newTransactionRef.id);
-                alert("Transaction submitted successfully! Your Reference ID is " + newTransactionRef.id);
+                showToast("Transaction submitted successfully! Ref ID: " + newTransactionRef.id);
                 
                 e.target.reset();
                 calculateExpectedPayment();
             } catch (error) {
                 console.error("Error adding document: ", error);
-                alert(`Error submitting transaction: ${error.message}`);
+                showToast(`Error submitting transaction: ${error.message}`, 'error');
             }
         }
         
