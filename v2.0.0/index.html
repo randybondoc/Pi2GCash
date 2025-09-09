@@ -135,7 +135,7 @@
         console.log("Script starting...");
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION ---
@@ -216,7 +216,7 @@
                 piUser = user;
                 console.log(`Pi authentication successful for: ${piUser.username}`);
 
-                // IMPORTANT: Replace this with the URL you get after deploying the 'createFirebaseToken' Cloud Function
+                // IMPORTANT: This is your live Cloud Function URL
                 const tokenFunctionUrl = 'https://createfirebasetoken-jz7lf4aclq-uc.a.run.app';
                 
                 const response = await fetch(tokenFunctionUrl, {
