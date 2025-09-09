@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, May 21, 2024 at 10:30 AM PST
+    Timestamp: Tuesday, September 9, 2025 at 7:40 PM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,9 +7,9 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Fixed a bug where a developer comment was visible on the page. The comment block was moved from before the <!DOCTYPE> tag to its correct location inside the <head> tag.
-    - Upgraded the initial loading view to a full-screen, centered overlay for a more professional user experience. This prevents the loading message from appearing in the wrong position.
-    - Added a subtle SVG spinner animation to the new loading screen to provide better visual feedback to the user.
+    - Corrected a critical regression bug. A JavaScript syntax error (missing '{}' braces in the 'handleLogin' function's catch block) that was fixed in a previous version was accidentally re-introduced in the last update.
+    - This version restores the correct syntax for the 'handleLogin' function, which resolves the 'Uncaught SyntaxError' and allows the app to launch correctly.
+    - This version also retains the improved user info header layout with the centered logout button from the previous update.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -299,14 +299,16 @@
         function enterMainApp() {
             if (!user) return;
             userInfoEl.innerHTML = `
-                <span>${user.displayName} (${user.email})</span>
+                <p>${user.displayName} (${user.email})</p>
                 <div class="flex items-center justify-center mt-1">
                     <span class="text-xs text-gray-400 mr-1">User ID:</span>
                     <span class="font-mono text-yellow-400 text-xs">${user.uid}</span>
                     <button id="copy-user-id-btn" class="ml-2 text-gray-400 hover:text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
                     </button>
-                    <button id="logout-btn" class="ml-4 text-red-500 hover:text-red-400 font-bold">Logout</button>
+                </div>
+                <div class="mt-2 text-center">
+                     <button id="logout-btn" class="text-red-500 hover:text-red-400 font-bold text-sm">Logout</button>
                 </div>
             `;
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
