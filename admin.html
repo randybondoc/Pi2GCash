@@ -1,0 +1,242 @@
+<!--
+    Timestamp: Tuesday, September 9, 2025 at 10:55 PM PST
+    File Name: admin.html
+    Full File Path: admin.html
+
+    App Functionality:
+    This is a secure dashboard for the Pi2GCash administrator. It requires the admin to sign in with an authorized Google account. Once authenticated, it displays a real-time list of pending transactions, allowing the admin to approve or reject them and add a corresponding note for the user.
+
+    Modifications Made in This Version:
+    - Added an "Admin Note" text input field for each pending transaction, as requested.
+    - The 'handleTransactionUpdate' function was updated to read the value from this new input field.
+    - The 'updateDoc' call now saves both the new status ('Paid'/'Rejected') AND the text from the admin note field to the Firestore document. This makes the note visible to the end-user.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi2GCash - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M6.5,50a43.5,43.5 0 1,0 87,0a43.5,43.5 0 1,0 -87,0' fill-opacity='0' stroke='%233B82F6' stroke-width='7.5'/><path d='M50,25 v50' stroke='%23FBBF24' stroke-width='7.5' stroke-linecap='round'/><path d='M32.5,42.5 l17.5,-17.5 l17.5,17.5' fill-opacity='0' stroke='%23FBBF24' stroke-width='7.5' stroke-linecap='round'/></svg>">
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+        .action-button { transition: all 0.2s ease-in-out; }
+        .action-button:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-200">
+
+    <!-- Login View -->
+    <div id="login-view" class="min-h-screen flex items-center justify-center">
+        <div class="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <div class="text-center mb-6">
+                <img src="pi2gc-logo.png" alt="Logo" class="h-20 w-auto mx-auto mb-4">
+                <h1 class="text-2xl font-bold text-white">Admin Dashboard</h1>
+            </div>
+            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-md flex items-center justify-center">
+                <svg class="w-5 h-5 mr-3" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 398.8 0 256S110.3 0 244 0c73 0 134.3 29.2 179.8 73.4L372.3 128.9C339.7 99.8 296.2 80 244 80c-87.6 0-159.3 70.2-159.3 176s71.7 176 159.3 176c98.2 0 135-70.4 140.8-106.9H244v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.8z"></path></svg>
+                Sign in with Google
+            </button>
+            <p id="login-error" class="text-red-500 text-sm mt-4 text-center"></p>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="hidden">
+        <header class="bg-gray-900 shadow-md p-4 flex justify-between items-center sticky top-0 z-50">
+            <div>
+                <h1 class="text-xl font-bold text-white">Pending Transactions</h1>
+                <p id="admin-email" class="text-xs text-gray-400"></p>
+            </div>
+            <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
+        </header>
+
+        <main class="p-4 md:p-6">
+            <div id="pending-list" class="space-y-4">
+                <p id="loading-transactions" class="text-center text-gray-400 py-10">Loading pending transactions...</p>
+            </div>
+        </main>
+    </div>
+
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- USE THE SAME FIREBASE CONFIG AS YOUR MAIN APP ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
+            authDomain: "pi-gcash-p2p-app.firebaseapp.com",
+            projectId: "pi-gcash-p2p-app",
+            storageBucket: "pi-gcash-p2p-app.appspot.com",
+            messagingSenderId: "148063854165",
+            appId: "1:148063854165:web:cd335ca3af278034e4fedc",
+            measurementId: "G-VVG58MWN3F"
+        };
+        
+        // --- ADMIN AUTHORIZATION ---
+        const ADMIN_EMAILS = ["randybondoc@gmail.com", "randysbondoc@gmail.com"];
+
+        // --- INITIALIZE FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- UI ELEMENTS ---
+        const loginView = document.getElementById('login-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const loginBtn = document.getElementById('login-btn');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const pendingList = document.getElementById('pending-list');
+        const adminEmailEl = document.getElementById('admin-email');
+        
+        let transactionsUnsubscribe = null;
+
+        // --- FUNCTIONS ---
+        function showDashboard(user) {
+            adminEmailEl.textContent = user.email;
+            loginView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+            listenForPendingTransactions();
+        }
+
+        function showLogin(errorMsg = '') {
+            dashboardView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+            loginError.textContent = errorMsg;
+            if (transactionsUnsubscribe) {
+                transactionsUnsubscribe(); 
+            }
+        }
+
+        async function handleLogin() {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+                showLogin(`Login failed: ${error.message}`);
+            }
+        }
+        
+        function handleLogout() {
+            signOut(auth);
+        }
+
+        function listenForPendingTransactions() {
+            if (transactionsUnsubscribe) transactionsUnsubscribe();
+
+            const q = query(collection(db, "transactions"), where("status", "==", "Pending Verification"), orderBy("createdAt", "asc"));
+
+            transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                pendingList.innerHTML = ''; 
+                if (querySnapshot.empty) {
+                    pendingList.innerHTML = `<p class="text-center text-gray-400 py-10">No pending transactions found.</p>`;
+                } else {
+                    querySnapshot.forEach(doc => {
+                        renderTransaction(doc.id, doc.data());
+                    });
+                }
+            }, (error) => {
+                console.error("Error fetching transactions: ", error);
+                pendingList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading transactions. Check console for permissions error.</p>`;
+            });
+        }
+
+        function renderTransaction(id, tx) {
+            const txElement = document.createElement('div');
+            txElement.className = 'bg-gray-700 p-4 rounded-lg shadow-md';
+            txElement.dataset.transactionId = id; // Add transaction id to the parent element
+            
+            const createdAt = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'N/A';
+            
+            txElement.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="font-bold text-cyan-400">Transaction Details</p>
+                        <p><span class="font-semibold text-gray-400">Submitted At:</span> ${createdAt}</p>
+                        <p><span class="font-semibold text-gray-400">User Email:</span> ${tx.userEmail}</p>
+                        <p><span class="font-semibold text-gray-400">User ID:</span> <code class="text-xs">${tx.userId}</code></p>
+                        <p><span class="font-semibold text-gray-400">Reference ID:</span> <code class="text-xs">${tx.transactionId}</code></p>
+                    </div>
+                    <div>
+                        <p class="font-bold text-amber-400">Payment Details</p>
+                        <p><span class="font-semibold text-gray-400">Pi Sent:</span> <strong class="text-white">${tx.piSent}π</strong></p>
+                        <p><span class="font-semibold text-gray-400">From Wallet:</span> <code class="text-xs">${tx.piWalletSource}</code></p>
+                        <p><span class="font-semibold text-gray-400">GCash Name:</span> ${tx.gcashName}</p>
+                        <p><span class="font-semibold text-gray-400">GCash Number:</span> ${tx.gcashNumber}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-600">
+                    <label for="admin-note-${id}" class="block text-sm font-medium text-gray-400 mb-1">Admin Note (visible to user)</label>
+                    <input type="text" id="admin-note-${id}" class="admin-note-input w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="e.g., GCash sent, waiting for confirmation...">
+                    <div class="mt-3 flex justify-end items-center gap-3">
+                        <button data-id="${id}" class="action-button reject-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
+                        <button data-id="${id}" class="action-button approve-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md text-sm">Approve</button>
+                    </div>
+                </div>
+            `;
+            pendingList.appendChild(txElement);
+        }
+
+        async function handleTransactionUpdate(e) {
+            const button = e.target.closest('.action-button');
+            if (!button) return;
+
+            const transactionId = button.dataset.id;
+            const parentElement = document.querySelector(`[data-transaction-id="${transactionId}"]`);
+            const noteInput = parentElement.querySelector('.admin-note-input');
+            const adminNoteText = noteInput.value.trim();
+
+            const isApproved = button.classList.contains('approve-btn');
+            const newStatus = isApproved ? 'Paid' : 'Rejected';
+
+            button.disabled = true;
+            button.textContent = 'Updating...';
+
+            const docRef = doc(db, "transactions", transactionId);
+            try {
+                await updateDoc(docRef, { 
+                    status: newStatus,
+                    adminNote: adminNoteText
+                });
+            } catch (error) {
+                console.error("Failed to update transaction:", error);
+                alert("Error: Could not update transaction status.");
+                button.disabled = false;
+                button.textContent = isApproved ? 'Approve' : 'Reject';
+            }
+        }
+
+        // --- MAIN INITIALIZATION ---
+        function init() {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    if (ADMIN_EMAILS.includes(user.email)) {
+                        console.log("Admin authenticated:", user.email);
+                        showDashboard(user);
+                    } else {
+                        console.warn("Unauthorized access attempt by:", user.email);
+                        handleLogout();
+                        showLogin("Access Denied. This account is not authorized.");
+                    }
+                } else {
+                    showLogin();
+                }
+            });
+            
+            loginBtn.addEventListener('click', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            pendingList.addEventListener('click', handleTransactionUpdate);
+        }
+
+        init();
+    </script>
+
+</body>
+</html>
+
