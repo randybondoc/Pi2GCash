@@ -19,6 +19,14 @@
 
     <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
 
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-600 p-4 rounded-lg text-center mb-6 shadow-lg">
+            <h2 class="font-bold text-white text-lg">🚀 A New Version is Here!</h2>
+            <p class="text-white text-sm mt-1">Try the new **v2.0.0** with direct Pi Wallet integration for a faster, more seamless experience!</p>
+            <a href="v2.0.0/" class="mt-3 inline-block bg-white text-orange-600 font-bold py-2 px-4 rounded-lg hover:bg-gray-200 transition">
+                Launch v2.0.0 (Pi Browser Recommended)
+            </a>
+        </div>
+
         <header id="app-header" class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
              <div class="flex items-center justify-center space-x-3">
                 <div class="w-12 h-12">
@@ -208,11 +216,10 @@
         console.log("Script starting...");
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, getRedirectResult, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION ---
-        // =================================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
             authDomain: "pi-gcash-p2p-app.firebaseapp.com",
@@ -222,20 +229,14 @@
             appId: "1:148063854165:web:cd335ca3af278034e4fedc",
             measurementId: "G-VVG58MWN3F"
         };
-        // =================================================================================
-
+        
         // --- INITIALIZE FIREBASE ---
         let app, auth, db;
         try {
-            console.log("Initializing Firebase App...");
             app = initializeApp(firebaseConfig);
-            console.log("Firebase App Initialized.");
-            console.log("Initializing Firebase Auth...");
             auth = getAuth(app);
-            console.log("Firebase Auth Initialized.");
-            console.log("Initializing Firebase Firestore...");
             db = getFirestore(app);
-            console.log("Firebase Firestore Initialized.");
+            console.log("Firebase Initialized Successfully.");
         } catch (error) {
             console.error("Firebase initialization failed:", error);
             document.getElementById('loading-view').textContent = 'Error: Could not connect to services. Please refresh.';
@@ -246,7 +247,7 @@
         let piPrice = 0;
         let currentGcashRate = 0;
         let transactionsUnsubscribe = null;
-        let priceUnsubscribe = null; // To hold the price listener
+        let priceUnsubscribe = null;
 
         // --- UI ELEMENT REFERENCES ---
         const views = {
@@ -272,46 +273,45 @@
         
         // --- VIEW MANAGEMENT ---
         function showView(viewName) {
-            Object.values(views).forEach(view => {
-                if (view) view.classList.add('hidden');
-            });
-            if (views[viewName]) {
-                views[viewName].classList.remove('hidden');
-            }
-            if (appHeader) {
-                appHeader.classList.toggle('hidden', viewName !== 'main');
-            }
+            Object.values(views).forEach(view => view && view.classList.add('hidden'));
+            if (views[viewName]) views[viewName].classList.remove('hidden');
+            if (appHeader) appHeader.classList.toggle('hidden', viewName !== 'main');
         }
         
         function enterMainApp() {
             if (!user) return;
             userInfoEl.innerHTML = `
-                <span>${user.displayName} (${user.email})</span>
-                <div class="flex items-center justify-center mt-1">
-                    <span class="text-xs text-gray-400 mr-1">User ID:</span>
-                    <span class="font-mono text-yellow-400 text-xs">${user.uid}</span>
-                    <button id="copy-user-id-btn" class="ml-2 text-gray-400 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
-                    </button>
-                    <button id="logout-btn" class="ml-4 text-red-500 hover:text-red-400 font-bold">Logout</button>
+                <div class="flex flex-col items-center space-y-1">
+                    <span>${user.displayName} (${user.email})</span>
+                    <div class="flex items-center">
+                        <span class="text-xs text-gray-400 mr-1">User ID:</span>
+                        <span class="font-mono text-yellow-400 text-xs">${user.uid}</span>
+                        <button id="copy-user-id-btn" class="ml-2 text-gray-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                        </button>
+                    </div>
+                    <div>
+                         <button id="logout-btn" class="text-red-500 hover:text-red-400 font-bold">Logout</button>
+                    </div>
                 </div>
             `;
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
             document.getElementById('copy-user-id-btn').addEventListener('click', () => handleCopy(user.uid, 'User ID copied!'));
+            
+            // Auto-generate TX ID when the main app view loads
+            if (!txIdDisplay.value) {
+                txIdDisplay.value = 'P2G-' + doc(collection(db, "transactions")).id.substring(0,8).toUpperCase();
+            }
+
             showView('main');
             listenForPriceChanges();
             listenForTransactions();
         }
 
         // --- EVENT HANDLERS ---
-        async function handleLogin() {
+        function handleLogin() {
             const provider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Login failed:", error);
-                alert(`Login failed: ${error.message}`);
-            }
+            signInWithRedirect(auth, provider);
         }
 
         function handleLogout() {
@@ -328,24 +328,18 @@
         
         function listenForPriceChanges() {
             if (priceUnsubscribe) priceUnsubscribe();
-
-            console.log("Setting up Firestore listener for Pi Price...");
             const priceDocRef = doc(db, "marketData", "piPrice");
-
             priceUnsubscribe = onSnapshot(priceDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     piPrice = data.price;
                     currentGcashRate = Math.floor(piPrice * 0.70);
                     const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
-
                     piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
                     priceTimestampEl.textContent = `as of ${timestamp}`;
                     gcashRateEl.textContent = `₱${currentGcashRate}`;
                     calculateExpectedPayment();
-                    console.log(`Real-time price update from Firestore: ${piPrice}`);
                 } else {
-                    console.log("Price document does not exist yet.");
                     piPriceEl.textContent = 'Waiting for data...';
                     gcashRateEl.textContent = 'Waiting...';
                 }
@@ -358,14 +352,11 @@
 
         function calculateExpectedPayment() {
             const piAmount = parseFloat(piSentInput.value);
-
             if (isNaN(piAmount) || piAmount <= 0) {
                 expectedPaymentEl.textContent = '₱0.00';
                 return;
             }
-            
             const expectedTotal = (piAmount * currentGcashRate) - 20;
-
             if (expectedTotal < 0) {
                 expectedPaymentEl.textContent = 'Amount too low';
                 expectedPaymentEl.classList.add('text-red-500');
@@ -375,21 +366,15 @@
             }
         }
         
-        function generateTransactionId() {
-            const prefix = 'P2G-';
-            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-            return `${prefix}${randomPart}`;
-        }
-
         async function handleSubmitTransaction(e) {
             e.preventDefault();
-            if (!user) {
-                alert("You must be logged in to submit a transaction.");
-                return;
-            }
+            if (!user) return alert("You must be logged in to submit a transaction.");
 
             const formData = new FormData(e.target);
+            const transactionId = formData.get('transaction-id-display');
+
             const transactionData = {
+                transactionId: transactionId,
                 userId: user.uid,
                 userEmail: user.email,
                 piSent: parseFloat(formData.get('pi-sent')),
@@ -402,16 +387,11 @@
             };
 
             try {
+                // Now we just add the document, since the ID is pre-generated
                 const docRef = await addDoc(collection(db, "transactions"), transactionData);
-                const transactionId = docRef.id;
-
-                await updateDoc(docRef, { transactionId: transactionId });
-                
-                console.log("Transaction submitted with GUARANTEED unique ID: ", transactionId);
                 alert("Transaction submitted successfully! Your Reference ID is " + transactionId);
-                
                 e.target.reset();
-                txIdDisplay.value = '';
+                txIdDisplay.value = 'P2G-' + doc(collection(db, "transactions")).id.substring(0,8).toUpperCase();
                 calculateExpectedPayment();
             } catch (error) {
                 console.error("Error adding document: ", error);
@@ -420,14 +400,10 @@
         }
         
         function listenForTransactions() {
-             if (transactionsUnsubscribe) transactionsUnsubscribe();
+            if (transactionsUnsubscribe) transactionsUnsubscribe();
             if (!user) return;
-            
-            console.log("Setting up Firestore listener for user:", user.uid);
             const q = query(collection(db, "transactions"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-            
             transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
-                console.log("Received transaction update from Firestore.");
                 transactionsList.innerHTML = '';
                 if (querySnapshot.empty) {
                     transactionsList.innerHTML = `<p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>`;
@@ -436,11 +412,7 @@
                 querySnapshot.forEach((doc) => {
                     const tx = doc.data();
                     const date = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'Just now';
-                    
-                    let statusColor = 'text-yellow-400';
-                    if (tx.status === 'Paid') statusColor = 'text-green-400';
-                    if (tx.status === 'Rejected') statusColor = 'text-red-400';
-
+                    let statusColor = tx.status === 'Paid' ? 'text-green-400' : (tx.status === 'Rejected' ? 'text-red-400' : 'text-yellow-400');
                     const txElement = document.createElement('div');
                     txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
                     txElement.innerHTML = `
@@ -476,6 +448,10 @@
                     showView('login');
                 }
             });
+            
+            getRedirectResult(auth).catch(error => {
+                console.error("Error from redirect result:", error);
+            });
 
             loginBtn.addEventListener('click', handleLogin);
             fbContinueBtn.addEventListener('click', () => {
@@ -485,11 +461,6 @@
             copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             piSentInput.addEventListener('input', calculateExpectedPayment);
-            transactionForm.addEventListener('focusin', (event) => {
-                if (!txIdDisplay.value && event.target.name !== 'transaction-id-display') {
-                    txIdDisplay.value = generateTransactionId();
-                }
-            });
             
             if (!/Mobi|Android/i.test(navigator.userAgent)) {
                 pcInstructions.classList.remove('hidden');
