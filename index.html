@@ -132,6 +132,10 @@
                 <p class="text-sm text-gray-400 mb-4">After you have sent the Pi, fill out this form to notify the admin. Payment will be sent to the GCash number you provide.</p>
                 <form id="transaction-form" class="space-y-4">
                     <div>
+                        <label for="transaction-id-display" class="block text-sm font-medium text-gray-300">Your Unique Transaction ID (auto-generated)</label>
+                        <input type="text" id="transaction-id-display" name="transaction-id-display" readonly class="mt-1 block w-full bg-gray-700/50 border-gray-600 rounded-md shadow-sm text-purple-400 font-mono text-center sm:text-sm p-3">
+                    </div>
+                    <div>
                         <label for="pi-wallet-source" class="block text-sm font-medium text-gray-300">Your Pi Wallet Source Address</label>
                         <input type="text" id="pi-wallet-source" name="pi-wallet-source" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
                     </div>
@@ -288,12 +292,6 @@
             showView('main');
             listenForPriceChanges();
             listenForTransactions();
-            
-            // Auto-generate a TX ID when the main app view loads
-            if (!txIdDisplay.value) {
-                const newTxId = 'P2G-' + doc(collection(db, "transactions")).id.substring(0,8).toUpperCase();
-                txIdDisplay.value = newTxId;
-            }
         }
 
         // --- EVENT HANDLERS ---
@@ -360,7 +358,6 @@
 
             const formData = new FormData(e.target);
             const transactionData = {
-                transactionId: formData.get('transaction-id-display'), // Get pre-generated ID
                 userId: user.uid,
                 userEmail: user.email,
                 piSent: parseFloat(formData.get('pi-sent')),
@@ -373,12 +370,11 @@
             };
 
             try {
-                // We use the pre-generated ID as the document ID for guaranteed uniqueness
-                await addDoc(collection(db, "transactions"), transactionData);
-                alert("Transaction submitted successfully! Your Reference ID is " + transactionData.transactionId);
+                const docRef = await addDoc(collection(db, "transactions"), transactionData);
+                await updateDoc(docRef, { transactionId: docRef.id });
+                alert("Transaction submitted successfully! Your Reference ID is " + docRef.id);
                 e.target.reset();
-                // Generate a new ID for the next transaction
-                txIdDisplay.value = 'P2G-' + doc(collection(db, "transactions")).id.substring(0,8).toUpperCase();
+                txIdDisplay.value = '';
                 calculateExpectedPayment();
             } catch (error) {
                 console.error("Error adding document: ", error);
@@ -418,11 +414,19 @@
             });
         }
 
-
         // --- MAIN INITIALIZATION ---
         function initApp() {
+            getRedirectResult(auth).catch(error => {
+                console.error("Error from redirect result:", error);
+            });
+
             onAuthStateChanged(auth, (currentUser) => {
                 user = currentUser;
+                // Auto-generate TX ID when the form comes into view
+                if (user && !txIdDisplay.value) {
+                    const newTxId = 'P2G-' + doc(collection(db, "transactions")).id.substring(0,6).toUpperCase();
+                    txIdDisplay.value = newTxId;
+                }
                 if (user) {
                     if (localStorage.getItem('fb_gate_passed') === 'true') {
                         enterMainApp();
@@ -434,12 +438,6 @@
                     if (priceUnsubscribe) priceUnsubscribe();
                     showView('login');
                 }
-            });
-            
-            // Check for redirect result on initial load
-            getRedirectResult(auth).catch(error => {
-                console.error("Error from redirect result:", error);
-                showView('login'); // If there's an error, show login
             });
 
             loginBtn.addEventListener('click', handleLogin);
