@@ -1,198 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi to GCash Exchange</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://sdk.pi.app/v2/pi-sdk.js"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .backdrop-blur-sm { backdrop-filter: blur(4px); }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-200">
+// This file is for your Firebase Cloud Function.
+// You will REPLACE the entire content of your existing 'index.js' with this new code.
 
-    <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const axios = require("axios");
+const cors = require("cors")({ origin: true });
+const logger = require("firebase-functions/logger");
 
-        <header id="app-header" class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
-             <div class="flex items-center justify-center space-x-3">
-                <div class="w-12 h-12">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path>
-                        <path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path>
-                    </svg>
-                </div>
-                <h1 class="text-3xl font-bold">
-                    <span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span>
-                </h1>
-            </div>
-            <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
-        </header>
+// Initialize the Firebase Admin SDK
+admin.initializeApp();
 
-        <div id="loading-view" class="text-center py-20">
-            <p>Initializing Secure Connection...</p>
-        </div>
+// This is our "Town Crier" function. It runs automatically every 1 minute.
+exports.updatePiPrice = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
+    logger.info("Scheduled function triggered: Fetching Pi price from CoinGecko.");
+    try {
+        const url = "https://api.coingecko.com/api/v3/simple/price?ids=pi-network-iou&vs_currencies=php";
+        const result = await axios.get(url);
+        const piData = result.data;
 
-        <div id="login-view" class="hidden text-center py-20">
-            <div class="flex items-center justify-center space-x-3 mb-4">
-                 <div class="w-16 h-16">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path><path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path></svg>
-                </div>
-                <h1 class="text-4xl font-bold"><span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span></h1>
-            </div>
-            <p class="mb-6 text-gray-400">Securely sign in to start your transaction.</p>
-            
-            <div id="login-buttons-container" class="space-y-4">
-                 <button id="pi-login-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg inline-flex items-center">
-                    Sign in with Pi (Recommended)
-                </button>
-                 <button id="google-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center">
-                    <svg class="w-4 h-4 mr-2" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 398.8 0 256S110.3 0 244 0c73 0 134.3 29.2 179.8 73.4L372.3 128.9C339.7 99.8 296.2 80 244 80c-87.6 0-159.3 70.2-159.3 176s71.7 176 159.3 176c98.2 0 135-70.4 140.8-106.9H244v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.8z"></path></svg>
-                    Sign in with Google
-                </button>
-            </div>
-        </div>
+        if (piData && piData['pi-network-iou'] && piData['pi-network-iou'].php) {
+            const price = piData['pi-network-iou'].php;
+            const db = admin.firestore();
+            await db.collection('marketData').doc('piPrice').set({
+                price: price,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            logger.info(`Successfully updated Pi price in Firestore to: ${price}`);
+        } else {
+             logger.warn("CoinGecko API did not return valid data.");
+        }
+    } catch (error) {
+        logger.error("Error fetching price from CoinGecko and updating Firestore:", error);
+    }
+    return null;
+});
 
-        <main id="main-view" class="hidden space-y-6">
-            </main>
-    </div>
-
-    <script type="module">
-        console.log("Script starting...");
-        // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, getRedirectResult, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // --- FIREBASE CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
-            authDomain: "pi-gcash-p2p-app.firebaseapp.com",
-            projectId: "pi-gcash-p2p-app",
-            storageBucket: "pi-gcash-p2p-app.appspot.com",
-            messagingSenderId: "148063854165",
-            appId: "1:148063854165:web:cd335ca3af278034e4fedc",
-            measurementId: "G-VVG58MWN3F"
-        };
-        
-        // --- PI SDK & APP CONSTANTS ---
-        const PI_API_KEY = "e4koobxkytoz1ttuyxrzol6wzzdvz9cwzg1omtlkg7tvvpbaa6rb2gtm0c9htnrl";
-        const RECIPIENT_WALLET = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
-
-        // --- INITIALIZE FIREBASE ---
-        let app, auth, db;
+// NEW: This is our "Front Desk" function that creates a Firebase "Visitor Pass".
+exports.createFirebaseToken = functions.https.onRequest((request, response) => {
+    cors(request, response, async () => {
         try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            console.log("Firebase Initialized Successfully.");
-        } catch (error) {
-            console.error("Firebase initialization failed:", error);
-            document.getElementById('loading-view').textContent = 'Error: Could not connect to services. Please refresh.';
-        }
-
-        // --- STATE MANAGEMENT ---
-        let user = null; // Can be Pi User or Google User
-        let isPiBrowser = false;
-        
-        // --- UI ELEMENT REFERENCES ---
-        const views = {
-            loading: document.getElementById('loading-view'),
-            login: document.getElementById('login-view'),
-            main: document.getElementById('main-view'),
-        };
-        const appHeader = document.getElementById('app-header');
-        const userInfoEl = document.getElementById('user-info');
-        const loginButtonsContainer = document.getElementById('login-buttons-container');
-        
-        // --- TEMPLATES ---
-        const mainContentTemplate = `
-            <div class="bg-gray-800 p-6 rounded-lg"> ... </div>
-            <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-lg text-center shadow-lg"> ... </div>
-            <div class="bg-gray-800 p-6 rounded-lg"> ... </div>
-            `;
-
-        // --- VIEW MANAGEMENT ---
-        function showView(viewName) {
-            Object.values(views).forEach(view => view && view.classList.add('hidden'));
-            if (views[viewName]) views[viewName].classList.remove('hidden');
-            if (appHeader) appHeader.classList.toggle('hidden', viewName !== 'main');
-        }
-        
-        function renderMainApp() {
-            views.main.innerHTML = mainContentTemplate;
-            // Re-bind all event listeners for the main app view here
-        }
-
-        function enterMainApp() {
-            if (!user) return;
-            // Customize user info based on login type
-            if (isPiBrowser) {
-                userInfoEl.innerHTML = `<span>Signed in as <strong class="text-yellow-400">${user.username}</strong></span>`;
-            } else {
-                 userInfoEl.innerHTML = `... Google User Info ...`;
+            const piUid = request.body.piUid;
+            if (!piUid) {
+                logger.warn("Pi UID not provided in request.");
+                return response.status(400).send({ error: "Pi UID is required." });
             }
-            renderMainApp();
-            showView('main');
-        }
-
-        // --- EVENT HANDLERS ---
-        function handleGoogleLogin() {
-            const provider = new GoogleAuthProvider();
-            signInWithRedirect(auth, provider);
-        }
-
-        async function handlePiLogin() {
-             try {
-                const scopes = ['username', 'payments'];
-                const piUser = await Pi.authenticate(scopes, (payment) => console.log('Incomplete payment found:', payment));
-                user = piUser; // Set the global user object
-                isPiBrowser = true;
-                enterMainApp();
-            } catch (err) {
-                console.error("Pi Authentication failed:", err);
-            }
-        }
-        
-        // --- MAIN INITIALIZATION ---
-        function initApp() {
-            showView('loading');
             
-            // Browser Sniffer Logic
-            try {
-                Pi.init({ version: "2.0", sandbox: false }, PI_API_KEY);
-                console.log("Pi SDK Initialized. Running in Pi Browser mode.");
-                isPiBrowser = true;
-                document.getElementById('google-login-btn').classList.add('hidden');
-                document.getElementById('pi-login-btn').addEventListener('click', handlePiLogin);
-                showView('login');
-            } catch (err) {
-                console.log("Not in Pi Browser. Running in Standard Browser mode.");
-                isPiBrowser = false;
-                document.getElementById('pi-login-btn').classList.add('hidden');
-                document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
-                
-                // Handle Google Login Redirect
-                getRedirectResult(auth).catch(error => {
-                    console.error("Error from redirect result:", error);
-                });
+            logger.info(`Generating custom token for Pi user: ${piUid}`);
+            const firebaseToken = await admin.auth().createCustomToken(piUid);
+            
+            response.status(200).send({ token: firebaseToken });
 
-                onAuthStateChanged(auth, (googleUser) => {
-                    if (googleUser) {
-                        user = googleUser; // Set the global user object
-                        enterMainApp();
-                    } else {
-                        showView('login');
-                    }
-                });
-            }
+        } catch (error) {
+            logger.error("Error creating custom token:", error);
+            response.status(500).send({ error: "Failed to create custom token." });
         }
-        
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
-</body>
-</html>
+    });
+});
