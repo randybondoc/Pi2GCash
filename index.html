@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, September 9, 2025 at 9:04 PM PST
+    Timestamp: Tuesday, September 9, 2025 at 9:55 PM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,11 +7,9 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Implemented a professional, non-intrusive "toast" notification system to replace all disruptive browser 'alert()' popups.
-    - Added a new <div> element to the HTML body to serve as a container for the notifications.
-    - Added custom CSS within the <style> tags for the appearance and slide-in/slide-out animations of the toast messages.
-    - Created a new JavaScript function called 'showToast(message, type)' which dynamically creates and manages the notifications. It can show different styles for 'success' (green) and 'error' (red) messages.
-    - Replaced every instance of 'alert()' in the JavaScript with a call to the new 'showToast()' function, providing a much cleaner and more modern user experience.
+    - Replaced the text-based header logo with the official 'pi2gc-logo.png' image for a more professional and branded appearance.
+    - An <img> tag now points to 'pi2gc-logo.png', which is expected to be in the same directory as this index.html file.
+    - The old SVG icon and the <h1> text element have been removed from the header.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -19,6 +17,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi to GCash Exchange</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z' fill='%23FBBF24'></path><path d='M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z' fill='%233B82F6'></path></svg>">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -78,26 +79,15 @@
     <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
 
         <header id="app-header" class="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
-             <div class="flex items-center justify-center space-x-3">
-                <div class="w-12 h-12">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path>
-                        <path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path>
-                    </svg>
-                </div>
-                <h1 class="text-3xl font-bold">
-                    <span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span>
-                </h1>
+             <div class="flex items-center justify-center">
+                <img src="pi2gc-logo.png" alt="Pi2GCash Logo" class="h-16 w-auto">
             </div>
             <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
         </header>
 
         <div id="login-view" class="hidden text-center py-20">
             <div class="flex items-center justify-center space-x-3 mb-4">
-                 <div class="w-16 h-16">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path><path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path></svg>
-                </div>
-                <h1 class="text-4xl font-bold"><span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span></h1>
+                 <img src="pi2gc-logo.png" alt="Pi2GCash Logo" class="h-20 w-auto">
             </div>
             <p class="mb-6 text-gray-400">Securely sign in to start your transaction.</p>
             <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center">
@@ -206,7 +196,9 @@
                         <input type="datetime-local" id="transaction-datetime" name="transaction-datetime" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
                     </div>
                     
-                     <button type="submit" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">I Have Sent the Pi, Submit for Verification</button>
+                     <button type="submit" id="submit-btn" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center disabled:opacity-50">
+                        I Have Sent the Pi, Submit for Verification
+                     </button>
                 </form>
             </div>
 
@@ -217,8 +209,9 @@
             </div>
 
              <div class="bg-gray-800 p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 3: Submit Proof of Transfer</h3>
-                <p class="text-sm text-gray-400">To help verify your transaction, capture a screenshot of the successful Pi transfer and post it in our Facebook Group for reference: 
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 3: Provide Proof for Faster Verification</h3>
+                <p class="text-sm text-gray-400">
+                    For faster verification, please provide proof of your transfer. Open your <a href="intent://#Intent;package=pi.browser;end" class="text-amber-400 font-bold hover:underline">Pi Browser</a> app, go to your wallet's transaction history, and take a screenshot of the successful transfer you sent to us. Post this screenshot in our official Facebook Group for the admin's reference: 
                     <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="text-base font-bold text-orange-400 hover:underline">PiCoinPH</a>.
                 </p>
             </div>
@@ -314,6 +307,7 @@
         const gcashRateEl = document.getElementById('gcash-rate');
         const copyAddressBtn = document.getElementById('copy-address-btn');
         const transactionForm = document.getElementById('transaction-form');
+        const submitBtn = document.getElementById('submit-btn');
         const piSentInput = document.getElementById('pi-sent');
         const expectedPaymentEl = document.getElementById('expected-payment-el');
         const transactionsList = document.getElementById('transactions-list');
@@ -447,6 +441,18 @@
                 return;
             }
 
+            const originalBtnHTML = submitBtn.innerHTML;
+
+            // --- Start Loading State ---
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Submitting...
+            `;
+
             const formData = new FormData(e.target);
             const transactionData = {
                 userId: user.uid,
@@ -461,13 +467,8 @@
             };
 
             try {
-                // The Fix: Create a reference with a new unique ID *before* writing data.
                 const newTransactionRef = doc(collection(db, "transactions"));
-                
-                // Add the new unique ID to our data object.
                 transactionData.transactionId = newTransactionRef.id;
-                
-                // Use setDoc to create the document with the complete data in one operation.
                 await setDoc(newTransactionRef, transactionData);
 
                 console.log("Transaction submitted with ID: ", newTransactionRef.id);
@@ -478,6 +479,10 @@
             } catch (error) {
                 console.error("Error adding document: ", error);
                 showToast(`Error submitting transaction: ${error.message}`, 'error');
+            } finally {
+                // --- End Loading State ---
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
             }
         }
         
