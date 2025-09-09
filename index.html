@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, September 9, 2025 at 11:05 PM PST
+    Timestamp: Wednesday, September 10, 2025 at 3:10 AM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,9 +7,8 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Completed the "Admin Note" feature by making notes visible to the end-user.
-    - The 'listenForTransactions' function was updated to check for an 'adminNote' field in the transaction data.
-    - If a note exists, it is now displayed in a new "Admin Note" section within the user's transaction card, providing clear feedback from the administrator.
+    - Added logic to save the GCash exchange rate at the moment of transaction submission.
+    - The 'handleSubmitTransaction' function now adds a 'rateAtSubmission' field to the transactionData object before saving it to Firestore. This provides historical context for the admin.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -168,7 +167,7 @@
                     <span>rates</span>
                 </h2>
                 <p id="gcash-rate" class="text-6xl md:text-7xl font-black text-lime-400 my-2" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.9);">Loading...</p>
-                <p class="text-xs text-indigo-300">rates auto refresh, wait patiently</p>
+                <p class="text-xs text-indigo-300">Rate updates when you type or click the button below.</p>
             </div>
 
             <div class="bg-gray-800 p-6 rounded-lg">
@@ -235,7 +234,7 @@
                     <span id="pi-price" class="font-semibold text-gray-200">Loading...</span>
                     <span id="price-timestamp" class="text-gray-500 text-xs block"></span>
                 </p>
-                 <p class="text-xs text-gray-500 mb-4">Rate updated every 20 seconds.</p>
+                <button id="update-price-btn" class="mt-2 mb-4 bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-1 px-2 rounded-md transition text-xs">Update Live Price</button>
 
                  <div class="flex justify-center items-center space-x-4">
                     <a href="https://minepi.com/" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">Pi Network</a>
@@ -252,7 +251,7 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, serverTimestamp, orderBy, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, serverTimestamp, orderBy, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION ---
         // =================================================================================
@@ -289,7 +288,7 @@
         let piPrice = 0;
         let currentGcashRate = 0;
         let transactionsUnsubscribe = null;
-        let priceUnsubscribe = null; // To hold the price listener
+        let debounceTimer;
 
         // --- UI ELEMENT REFERENCES ---
         const views = {
@@ -312,6 +311,7 @@
         const expectedPaymentEl = document.getElementById('expected-payment-el');
         const transactionsList = document.getElementById('transactions-list');
         const pcInstructions = document.getElementById('pc-instructions');
+        const updatePriceBtn = document.getElementById('update-price-btn');
         
         // --- TOAST NOTIFICATION FUNCTION ---
         function showToast(message, type = 'success') {
@@ -357,11 +357,39 @@
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
             document.getElementById('copy-user-id-btn').addEventListener('click', () => handleCopy(user.uid, 'User ID copied!'));
             showView('main');
-            listenForPriceChanges();
+            fetchPrice(); // Fetch price on initial load
             listenForTransactions();
         }
 
-        // --- EVENT HANDLERS ---
+        // --- EVENT HANDLERS & LOGIC ---
+        async function fetchPrice() {
+            console.log("Fetching Pi Price...");
+            const priceDocRef = doc(db, "marketData", "piPrice");
+            try {
+                const docSnap = await getDoc(priceDocRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    piPrice = data.price;
+                    currentGcashRate = Math.floor(piPrice * 0.70);
+                    const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
+
+                    piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
+                    priceTimestampEl.textContent = `as of ${timestamp}`;
+                    gcashRateEl.textContent = `₱${currentGcashRate}`;
+                    calculateExpectedPayment(); // Recalculate after fetching new price
+                    console.log(`Price updated from Firestore: ${piPrice}`);
+                } else {
+                    console.log("Price document does not exist yet.");
+                    piPriceEl.textContent = 'Waiting for data...';
+                    gcashRateEl.textContent = 'Waiting...';
+                }
+            } catch (error) {
+                 console.error("Error fetching price:", error);
+                piPriceEl.textContent = 'Unavailable';
+                gcashRateEl.textContent = 'Unavailable';
+            }
+        }
+
         async function handleLogin() {
             const provider = new GoogleAuthProvider();
             try {
@@ -382,36 +410,6 @@
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
                 showToast('Failed to copy text.', 'error');
-            });
-        }
-        
-        function listenForPriceChanges() {
-            if (priceUnsubscribe) priceUnsubscribe();
-
-            console.log("Setting up Firestore listener for Pi Price...");
-            const priceDocRef = doc(db, "marketData", "piPrice");
-
-            priceUnsubscribe = onSnapshot(priceDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    piPrice = data.price;
-                    currentGcashRate = Math.floor(piPrice * 0.70);
-                    const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
-
-                    piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
-                    priceTimestampEl.textContent = `as of ${timestamp}`;
-                    gcashRateEl.textContent = `₱${currentGcashRate}`;
-                    calculateExpectedPayment();
-                    console.log(`Real-time price update from Firestore: ${piPrice}`);
-                } else {
-                    console.log("Price document does not exist yet.");
-                    piPriceEl.textContent = 'Waiting for data...';
-                    gcashRateEl.textContent = 'Waiting...';
-                }
-            }, (error) => {
-                console.error("Error listening to price changes:", error);
-                piPriceEl.textContent = 'Unavailable';
-                gcashRateEl.textContent = 'Unavailable';
             });
         }
 
@@ -442,8 +440,6 @@
             }
 
             const originalBtnHTML = submitBtn.innerHTML;
-
-            // --- Start Loading State ---
             submitBtn.disabled = true;
             submitBtn.innerHTML = `
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -464,7 +460,8 @@
                 transactionTime: new Date(formData.get('transaction-datetime')),
                 status: 'Pending Verification',
                 createdAt: serverTimestamp(),
-                adminNote: '' // Initialize with an empty note
+                adminNote: '',
+                rateAtSubmission: currentGcashRate // Capture the rate
             };
 
             try {
@@ -481,7 +478,6 @@
                 console.error("Error adding document: ", error);
                 showToast(`Error submitting transaction: ${error.message}`, 'error');
             } finally {
-                // --- End Loading State ---
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHTML;
             }
@@ -551,7 +547,6 @@
                     }
                 } else {
                     if (transactionsUnsubscribe) transactionsUnsubscribe();
-                    if (priceUnsubscribe) priceUnsubscribe();
                     showView('login');
                 }
             });
@@ -563,7 +558,18 @@
             });
             copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
-            piSentInput.addEventListener('input', calculateExpectedPayment);
+            
+            // Event listener for manual price update
+            updatePriceBtn.addEventListener('click', fetchPrice);
+
+            // Event listener for price update on input (debounced)
+            piSentInput.addEventListener('input', () => {
+                calculateExpectedPayment(); // Calculate immediately with current rate
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    fetchPrice(); // Fetch new price after user stops typing
+                }, 500); // 500ms delay
+            });
             
             if (!/Mobi|Android/i.test(navigator.userAgent)) {
                 pcInstructions.classList.remove('hidden');

@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, September 9, 2025 at 10:55 PM PST
+    Timestamp: Wednesday, September 10, 2025 at 3:20 AM PST
     File Name: admin.html
     Full File Path: admin.html
 
@@ -7,9 +7,10 @@
     This is a secure dashboard for the Pi2GCash administrator. It requires the admin to sign in with an authorized Google account. Once authenticated, it displays a real-time list of pending transactions, allowing the admin to approve or reject them and add a corresponding note for the user.
 
     Modifications Made in This Version:
-    - Added an "Admin Note" text input field for each pending transaction, as requested.
-    - The 'handleTransactionUpdate' function was updated to read the value from this new input field.
-    - The 'updateDoc' call now saves both the new status ('Paid'/'Rejected') AND the text from the admin note field to the Firestore document. This makes the note visible to the end-user.
+    - Added the "Quick App Launchers" section to the main dashboard for convenient access to Pi Network, Pi Browser, and GCash, as requested.
+    - Added the "Rate at Submission" to the transaction details card. This displays the historical GCash exchange rate that was active when the user created the transaction, providing critical context for payment processing.
+    - Added a "GCash Payment Due" calculation to each transaction card. It automatically multiplies the Pi sent by the historical rate and subtracts the ₱20 platform fee, showing the admin the exact amount to pay out.
+    - The 'renderTransaction' function was updated to perform and display this calculation.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -52,7 +53,18 @@
             <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
         </header>
 
-        <main class="p-4 md:p-6">
+        <main class="p-4 md:p-6 space-y-6">
+            <!-- Quick App Launchers -->
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <p class="text-center font-semibold mb-3 text-white">Quick App Launchers</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <a href="intent://#Intent;package=com.blockchainvault;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
+                    <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
+                    <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+                </div>
+            </div>
+
+            <!-- Pending Transactions List -->
             <div id="pending-list" class="space-y-4">
                 <p id="loading-transactions" class="text-center text-gray-400 py-10">Loading pending transactions...</p>
             </div>
@@ -150,10 +162,18 @@
         function renderTransaction(id, tx) {
             const txElement = document.createElement('div');
             txElement.className = 'bg-gray-700 p-4 rounded-lg shadow-md';
-            txElement.dataset.transactionId = id; // Add transaction id to the parent element
+            txElement.dataset.transactionId = id; 
             
             const createdAt = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'N/A';
+            const rateInfo = tx.rateAtSubmission ? `₱${tx.rateAtSubmission}/π` : 'N/A';
             
+            let paymentDueHTML = '<p class="text-2xl font-bold text-gray-500">N/A</p>';
+            if (tx.rateAtSubmission && tx.piSent) {
+                const paymentAmount = (tx.piSent * tx.rateAtSubmission) - 20.00;
+                paymentDueHTML = `<p class="text-3xl font-bold text-green-400">₱${paymentAmount.toFixed(2)}</p>`;
+            }
+
+
             txElement.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
@@ -166,10 +186,15 @@
                     <div>
                         <p class="font-bold text-amber-400">Payment Details</p>
                         <p><span class="font-semibold text-gray-400">Pi Sent:</span> <strong class="text-white">${tx.piSent}π</strong></p>
+                        <p><span class="font-semibold text-gray-400">Rate at Submission:</span> <strong class="text-lime-400">${rateInfo}</strong></p>
                         <p><span class="font-semibold text-gray-400">From Wallet:</span> <code class="text-xs">${tx.piWalletSource}</code></p>
                         <p><span class="font-semibold text-gray-400">GCash Name:</span> ${tx.gcashName}</p>
                         <p><span class="font-semibold text-gray-400">GCash Number:</span> ${tx.gcashNumber}</p>
                     </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-600 text-center bg-gray-800 rounded-b-md">
+                    <p class="text-sm font-semibold text-gray-400">GCash Payment Due (Rate * Pi) - ₱20 Fee</p>
+                    ${paymentDueHTML}
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-600">
                     <label for="admin-note-${id}" class="block text-sm font-medium text-gray-400 mb-1">Admin Note (visible to user)</label>
