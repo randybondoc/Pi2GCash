@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Tuesday, September 9, 2025 at 10:25 PM PST
+    Timestamp: Tuesday, September 9, 2025 at 11:05 PM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,8 +7,9 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Replaced the previous favicon with a new, professionally designed SVG icon that is bolder, cleaner, and looks much better at small sizes.
-    - The new SVG design is simplified to ensure it is clear and recognizable in a browser tab, addressing the quality issue with the previous version.
+    - Completed the "Admin Note" feature by making notes visible to the end-user.
+    - The 'listenForTransactions' function was updated to check for an 'adminNote' field in the transaction data.
+    - If a note exists, it is now displayed in a new "Admin Note" section within the user's transaction card, providing clear feedback from the administrator.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -462,7 +463,8 @@
                 piWalletSource: formData.get('pi-wallet-source'),
                 transactionTime: new Date(formData.get('transaction-datetime')),
                 status: 'Pending Verification',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                adminNote: '' // Initialize with an empty note
             };
 
             try {
@@ -507,6 +509,16 @@
                     if (tx.status === 'Paid') statusColor = 'text-green-400';
                     if (tx.status === 'Rejected') statusColor = 'text-red-400';
 
+                    let adminNoteHTML = '';
+                    if (tx.adminNote && tx.adminNote.trim() !== '') {
+                        adminNoteHTML = `
+                            <div class="mt-2 pt-2 border-t border-gray-600">
+                                <p class="text-xs text-gray-400 font-semibold">Admin Note:</p>
+                                <p class="text-sm text-yellow-300 whitespace-pre-wrap">${tx.adminNote}</p>
+                            </div>
+                        `;
+                    }
+
                     const txElement = document.createElement('div');
                     txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
                     txElement.innerHTML = `
@@ -517,6 +529,7 @@
                         <p class="text-xs text-gray-400">GCash: ${tx.gcashNumber}</p>
                         <p class="text-xs text-purple-300 font-mono">ID: ${tx.transactionId || 'N/A'}</p>
                         <p class="text-xs text-gray-500 mt-1">${date}</p>
+                        ${adminNoteHTML}
                     `;
                     transactionsList.appendChild(txElement);
                 });
