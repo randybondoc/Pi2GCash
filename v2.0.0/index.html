@@ -1,58 +1,388 @@
-// This file is for your Firebase Cloud Function.
-// You will REPLACE the entire content of your existing 'index.js' with this new code.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi to GCash Exchange v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://sdk.pi.app/v2/pi-sdk.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .backdrop-blur-sm { backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
 
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const axios = require("axios");
-const cors = require("cors")({ origin: true });
-const logger = require("firebase-functions/logger");
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
 
-// Initialize the Firebase Admin SDK
-admin.initializeApp();
+        <header id="app-header" class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
+             <div class="flex items-center justify-center space-x-3">
+                <div class="w-12 h-12">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path>
+                        <path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold">
+                    <span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span>
+                </h1>
+            </div>
+            <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
+        </header>
 
-// This is our "Town Crier" function. It runs automatically every 1 minute.
-exports.updatePiPrice = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
-    logger.info("Scheduled function triggered: Fetching Pi price from CoinGecko.");
-    try {
-        const url = "https://api.coingecko.com/api/v3/simple/price?ids=pi-network-iou&vs_currencies=php";
-        const result = await axios.get(url);
-        const piData = result.data;
+        <div id="loading-view" class="text-center py-20">
+            <p>Initializing Pi Network Connection...</p>
+        </div>
 
-        if (piData && piData['pi-network-iou'] && piData['pi-network-iou'].php) {
-            const price = piData['pi-network-iou'].php;
-            const db = admin.firestore();
-            await db.collection('marketData').doc('piPrice').set({
-                price: price,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-            logger.info(`Successfully updated Pi price in Firestore to: ${price}`);
-        } else {
-             logger.warn("CoinGecko API did not return valid data.");
-        }
-    } catch (error) {
-        logger.error("Error fetching price from CoinGecko and updating Firestore:", error);
-    }
-    return null;
-});
+        <div id="login-view" class="hidden text-center py-20">
+            <div class="flex items-center justify-center space-x-3 mb-4">
+                 <div class="w-16 h-16">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path><path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path></svg>
+                </div>
+                <h1 class="text-4xl font-bold"><span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span></h1>
+            </div>
+            <p class="mb-6 text-gray-400">Please sign in with your Pi account to continue.</p>
+            <button id="pi-login-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg inline-flex items-center">
+                Sign in with Pi
+            </button>
+        </div>
+        
+        <div id="pi-browser-required-view" class="hidden text-center py-20 bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Pi Browser Required</h2>
+            <p class="text-gray-300">This version of the application is designed to work securely inside the Pi Browser.</p>
+            <p class="text-gray-400 mt-2">Please open the Pi Browser on your mobile device and navigate to this app's URL to continue.</p>
+        </div>
 
-// NEW: This is our "Front Desk" function that creates a Firebase "Visitor Pass".
-exports.createFirebaseToken = functions.https.onRequest((request, response) => {
-    cors(request, response, async () => {
+
+        <main id="main-view" class="hidden space-y-6">
+
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 1: Review Details & Conversion Rate</h3>
+                 <div class="space-y-4">
+                    <p>The recipient wallet is locked and verified. Simply enter the amount of Pi you wish to send and your GCash details below.</p>
+                    <div>
+                        <p class="text-sm">Recipient Pi Wallet Address:</p>
+                        <div class="mt-1 flex items-center bg-gray-700 p-2 rounded-md">
+                            <input id="pi-wallet-address" readonly class="bg-transparent font-mono text-base sm:text-lg w-full text-amber-400" value="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-lg text-center shadow-lg">
+                <h2 class="text-lg font-medium text-white flex justify-center items-baseline gap-x-1.5">
+                    <span>Direct to</span>
+                    <span class="font-bold text-blue-500 text-2xl" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.6);">GCASH</span>
+                    <span>rates</span>
+                </h2>
+                <p id="gcash-rate" class="text-6xl md:text-7xl font-black text-lime-400 my-2" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.9);">Loading...</p>
+                <p class="text-xs text-indigo-300">rates auto refresh, wait patiently</p>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 2: Enter Details & Initiate Transfer</h3>
+                <p class="text-sm text-gray-400 mb-4">When you click the button below, your Pi Wallet will open to confirm the transaction. The form will be submitted automatically after your confirmation.</p>
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label for="pi-sent" class="block text-sm font-medium text-gray-300">Amount of Pi to Send (π)</label>
+                        <input type="number" id="pi-sent" name="pi-sent" step="any" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-name" class="block text-sm font-medium text-gray-300">Your Full GCash Name</label>
+                        <input type="text" id="gcash-name" name="gcash-name" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-number" class="block text-sm font-medium text-gray-300">Your GCash Number (e.g. 0917...)</label>
+                        <input type="text" id="gcash-number" name="gcash-number" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                     <button type="submit" id="submit-btn" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">Initiate Pi Transfer</button>
+                </form>
+            </div>
+
+            <div class="bg-gray-900/50 p-6 rounded-lg text-center border border-purple-500">
+                <h3 class="text-lg font-medium text-gray-300">Expected GCash Payment</h3>
+                <p id="expected-payment-el" class="text-4xl font-bold text-purple-400 my-2">₱0.00</p>
+                <p class="text-xs text-gray-400">A ₱20.00 platform fee is deducted to maintain the app and support development.</p>
+            </div>
+
+             <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-white">My Transactions</h3>
+                <div id="transactions-list" class="space-y-3">
+                     <p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>
+                </div>
+            </div>
+            
+            <footer class="text-center py-4">
+                <p class="text-sm text-gray-400">
+                    <span class="font-bold">Pi Live Market Price:</span> 
+                    <span id="pi-price" class="font-semibold text-gray-200">Loading...</span>
+                    <span id="price-timestamp" class="text-gray-500 text-xs block"></span>
+                </p>
+                 <p class="text-xs text-gray-500 mb-4">Rate updated every minute.</p>
+                 <div class="flex justify-center items-center space-x-4">
+                    <a href="https://minepi.com/" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">Pi Network</a>
+                    <a href="https://www.coingecko.com/en/coins/pi-network/php" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">CoinGecko</a>
+                    <a href="https://www.okx.com/account/login" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">OKX</a>
+                 </div>
+            </footer>
+        </main>
+    </div>
+
+    <script type="module">
+        console.log("Script starting...");
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
+            authDomain: "pi-gcash-p2p-app.firebaseapp.com",
+            projectId: "pi-gcash-p2p-app",
+            storageBucket: "pi-gcash-p2p-app.appspot.com",
+            messagingSenderId: "148063854165",
+            appId: "1:148063854165:web:cd335ca3af278034e4fedc",
+            measurementId: "G-VVG58MWN3F"
+        };
+        
+        // --- PI SDK & APP CONSTANTS ---
+        const PI_API_KEY = "e4koobxkytoz1ttuyxrzol6wzzdvz9cwzg1omtlkg7tvvpbaa6rb2gtm0c9htnrl";
+        const RECIPIENT_WALLET = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
+
+        // --- INITIALIZE FIREBASE ---
+        let app, auth, db;
         try {
-            const piUid = request.body.piUid;
-            if (!piUid) {
-                logger.warn("Pi UID not provided in request.");
-                return response.status(400).send({ error: "Pi UID is required." });
-            }
-            
-            logger.info(`Generating custom token for Pi user: ${piUid}`);
-            const firebaseToken = await admin.auth().createCustomToken(piUid);
-            
-            response.status(200).send({ token: firebaseToken });
-
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase Initialized Successfully.");
         } catch (error) {
-            logger.error("Error creating custom token:", error);
-            response.status(500).send({ error: "Failed to create custom token." });
+            console.error("Firebase initialization failed:", error);
         }
-    });
-});
+
+        // --- STATE MANAGEMENT ---
+        let piUser = null;
+        let firebaseUser = null;
+        let piPrice = 0;
+        let currentGcashRate = 0;
+        let transactionsUnsubscribe = null;
+        let priceUnsubscribe = null;
+
+        // --- UI ELEMENT REFERENCES ---
+        const views = {
+            loading: document.getElementById('loading-view'),
+            login: document.getElementById('login-view'),
+            piBrowserRequired: document.getElementById('pi-browser-required-view'),
+            main: document.getElementById('main-view'),
+        };
+        const appHeader = document.getElementById('app-header');
+        const userInfoEl = document.getElementById('user-info');
+        const loginBtn = document.getElementById('pi-login-btn');
+        const piPriceEl = document.getElementById('pi-price');
+        const priceTimestampEl = document.getElementById('price-timestamp');
+        const gcashRateEl = document.getElementById('gcash-rate');
+        const transactionForm = document.getElementById('transaction-form');
+        const piSentInput = document.getElementById('pi-sent');
+        const expectedPaymentEl = document.getElementById('expected-payment-el');
+        const transactionsList = document.getElementById('transactions-list');
+        
+        // --- VIEW MANAGEMENT ---
+        function showView(viewName) {
+            Object.values(views).forEach(view => view && view.classList.add('hidden'));
+            if (views[viewName]) views[viewName].classList.remove('hidden');
+            if (appHeader) appHeader.classList.toggle('hidden', viewName !== 'main');
+        }
+        
+        function enterMainApp() {
+            if (!piUser || !firebaseUser) return;
+            userInfoEl.innerHTML = `<span>Signed in as <strong class="text-yellow-400">${piUser.username}</strong></span>`;
+            showView('main');
+            listenForPriceChanges();
+            listenForTransactions();
+        }
+
+        // --- AUTHENTICATION FLOW ---
+        async function handlePiLogin() {
+            try {
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Authenticating...';
+                
+                const scopes = ['username', 'payments'];
+                const user = await Pi.authenticate(scopes, onIncompletePaymentFound);
+                piUser = user;
+                console.log(`Pi authentication successful for: ${piUser.username}`);
+
+                // IMPORTANT: Replace this with the URL you get after deploying the 'createFirebaseToken' Cloud Function
+                const tokenFunctionUrl = 'https://createfirebasetoken-jz7lf4aclq-uc.a.run.app';
+                
+                const response = await fetch(tokenFunctionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ piUid: piUser.uid })
+                });
+
+                if (!response.ok) throw new Error('Failed to get Firebase token.');
+                
+                const data = await response.json();
+                const firebaseToken = data.token;
+                
+                const userCredential = await signInWithCustomToken(auth, firebaseToken);
+                firebaseUser = userCredential.user;
+                console.log(`Firebase custom auth successful for UID: ${firebaseUser.uid}`);
+                
+                enterMainApp();
+
+            } catch (err) {
+                console.error("Full authentication flow failed:", err);
+                alert("Authentication failed. Please refresh and try again.");
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign in with Pi';
+            }
+        }
+        
+        // --- DATA LISTENERS & HELPERS ---
+        function listenForPriceChanges() {
+            if (priceUnsubscribe) priceUnsubscribe();
+            const priceDocRef = doc(db, "marketData", "piPrice");
+            priceUnsubscribe = onSnapshot(priceDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    piPrice = data.price;
+                    currentGcashRate = Math.floor(piPrice * 0.70);
+                    const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
+                    piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
+                    priceTimestampEl.textContent = `as of ${timestamp}`;
+                    gcashRateEl.textContent = `₱${currentGcashRate}`;
+                    calculateExpectedPayment();
+                }
+            });
+        }
+
+        function calculateExpectedPayment() {
+            const piAmount = parseFloat(piSentInput.value);
+            if (isNaN(piAmount) || piAmount <= 0) {
+                expectedPaymentEl.textContent = '₱0.00';
+                return;
+            }
+            const expectedTotal = (piAmount * currentGcashRate) - 20;
+            if (expectedTotal < 0) {
+                expectedPaymentEl.textContent = 'Amount too low';
+            } else {
+                expectedPaymentEl.textContent = `₱${expectedTotal.toFixed(2)}`;
+            }
+        }
+        
+        async function handleSubmitTransaction(e) {
+            e.preventDefault();
+            if (!piUser || !firebaseUser) return alert("Authentication error. Please sign in again.");
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            const piAmount = parseFloat(document.getElementById('pi-sent').value);
+            const gcashName = document.getElementById('gcash-name').value;
+            const gcashNumber = document.getElementById('gcash-number').value;
+
+            try {
+                const paymentData = {
+                    amount: piAmount,
+                    memo: `Pi2GCash Exchange for ${gcashName}`,
+                    recipient: RECIPIENT_WALLET
+                };
+                
+                Pi.createPayment(paymentData, {
+                    onReadyForServerComplete: async (paymentId, txid) => {
+                        try {
+                            const transactionData = {
+                                piUserId: piUser.uid,
+                                piUsername: piUser.username,
+                                piAmount: piAmount,
+                                gcashName: gcashName,
+                                gcashNumber: gcashNumber,
+                                txid: txid,
+                                status: 'Pending Verification',
+                                createdAt: serverTimestamp()
+                            };
+                            await addDoc(collection(db, "transactions"), transactionData);
+                            alert(`Transaction Successful! Your reference TXID is: ${txid}`);
+                            transactionForm.reset();
+                        } catch (dbError) {
+                            alert("Your Pi transfer was successful, but there was an error saving the record. Please contact support with your TXID: " + txid);
+                        } finally {
+                             submitBtn.disabled = false;
+                             submitBtn.textContent = 'Initiate Pi Transfer';
+                        }
+                    },
+                    onCancel: () => {
+                        alert("You have cancelled the payment.");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Initiate Pi Transfer';
+                    }
+                });
+            } catch (sdkError) {
+                alert("An error occurred. Please make sure you are in the Pi Browser.");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Initiate Pi Transfer';
+            }
+        }
+        
+        const onIncompletePaymentFound = (payment) => {
+            console.log('Incomplete payment found:', payment);
+            alert('An incomplete payment was found. Please complete or cancel it in your wallet before starting a new one.');
+        };
+        
+        function listenForTransactions() {
+            if (transactionsUnsubscribe) transactionsUnsubscribe();
+            if (!piUser) return;
+            const q = query(collection(db, "transactions"), where("piUserId", "==", piUser.uid), orderBy("createdAt", "desc"));
+            transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                transactionsList.innerHTML = '';
+                if (querySnapshot.empty) {
+                    transactionsList.innerHTML = `<p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>`;
+                    return;
+                }
+                querySnapshot.forEach((doc) => {
+                    const tx = doc.data();
+                    const date = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'Just now';
+                    let statusColor = tx.status === 'Paid' ? 'text-green-400' : (tx.status === 'Rejected' ? 'text-red-400' : 'text-yellow-400');
+                    const txElement = document.createElement('div');
+                    txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
+                    txElement.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="font-bold">Sent ${tx.piAmount}π</p>
+                            <p class="${statusColor} font-semibold">${tx.status}</p>
+                        </div>
+                        <p class="text-xs text-gray-400">GCash: ${tx.gcashNumber}</p>
+                        <p class="text-xs text-purple-300 font-mono truncate">TXID: ${tx.txid || 'N/A'}</p>
+                        <p class="text-xs text-gray-500 mt-1">${date}</p>
+                    `;
+                    transactionsList.appendChild(txElement);
+                });
+            });
+        }
+
+        // --- MAIN INITIALIZATION ---
+        function initApp() {
+            showView('loading');
+            try {
+                Pi.init({ version: "2.0", sandbox: false }, PI_API_KEY);
+                console.log("Pi SDK Initialized.");
+                loginBtn.addEventListener('click', handlePiLogin);
+                transactionForm.addEventListener('submit', handleSubmitTransaction);
+                piSentInput.addEventListener('input', calculateExpectedPayment);
+                showView('login');
+            } catch (err) {
+                console.error("Pi SDK failed to initialize. Likely not in Pi Browser.", err);
+                showView('piBrowserRequired');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
