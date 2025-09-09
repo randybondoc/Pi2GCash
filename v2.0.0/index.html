@@ -135,7 +135,7 @@
         console.log("Script starting...");
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION ---
@@ -369,15 +369,17 @@
         // --- MAIN INITIALIZATION ---
         function initApp() {
             showView('loading');
-            try {
+            
+            // CORRECTED BROWSER DETECTION LOGIC
+            if (window.Pi) {
+                console.log("Pi SDK object found. Running in Pi Browser mode.");
                 Pi.init({ version: "2.0", sandbox: false }, PI_API_KEY);
-                console.log("Pi SDK Initialized.");
                 loginBtn.addEventListener('click', handlePiLogin);
                 transactionForm.addEventListener('submit', handleSubmitTransaction);
                 piSentInput.addEventListener('input', calculateExpectedPayment);
                 showView('login');
-            } catch (err) {
-                console.error("Pi SDK failed to initialize. Likely not in Pi Browser.", err);
+            } else {
+                console.error("Pi SDK object not found. This app must be run in the Pi Browser.");
                 showView('piBrowserRequired');
             }
         }
