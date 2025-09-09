@@ -443,7 +443,509 @@
             loginBtn.addEventListener('click', handleLogin);
             fbContinueBtn.addEventListener('click', () => {
                 localStorage.setItem('fb_gate_passed', 'true');
+                enterMainApp();<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi to GCash Exchange</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .backdrop-blur-sm { backdrop-filter: blur(4px); }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1048178550469494"
+     crossorigin="anonymous"></script>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
+
+        <header id="app-header" class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
+             <div class="flex items-center justify-center space-x-3">
+                <div class="w-12 h-12">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path>
+                        <path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold">
+                    <span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span>
+                </h1>
+            </div>
+            <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
+        </header>
+
+        <div id="loading-view" class="text-center py-20">
+            <p>Initializing Secure Connection...</p>
+        </div>
+
+        <div id="login-view" class="hidden text-center py-20">
+            <div class="flex items-center justify-center space-x-3 mb-4">
+                 <div class="w-16 h-16">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20,35 H70 L85,50 L70,65 H20 V55 H60 L70,50 L60,45 H20 Z" fill="#FBBF24"></path><path d="M80,65 H30 L15,50 L30,35 H80 V45 H40 L30,50 L40,55 H80 Z" fill="#3B82F6"></path></svg>
+                </div>
+                <h1 class="text-4xl font-bold"><span class="text-yellow-400">Pi</span><span class="text-gray-200">2</span><span class="text-blue-500">GCash</span></h1>
+            </div>
+            <p class="mb-6 text-gray-400">Securely sign in to start your transaction.</p>
+            <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 398.8 0 256S110.3 0 244 0c73 0 134.3 29.2 179.8 73.4L372.3 128.9C339.7 99.8 296.2 80 244 80c-87.6 0-159.3 70.2-159.3 176s71.7 176 159.3 176c98.2 0 135-70.4 140.8-106.9H244v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.8z"></path></svg>
+                Sign in with Google
+            </button>
+        </div>
+
+        <div id="fb-gate-view" class="hidden bg-gray-800 p-8 rounded-lg text-left">
+             <h2 class="text-2xl font-bold mb-4 text-center text-cyan-400">Welcome! One Final Step to Secure Your Transactions</h2>
+             <p class="text-gray-300 mb-6 text-center">To ensure a **secure and transparent** community, we highly recommend all users join our official Facebook group. This is our commitment to you that **we are legitimate buyers** and your transactions are safe with us.</p>
+            
+             <div class="space-y-4 text-gray-300 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008H12v-.008z" /></svg>
+                    <div>
+                        <h3 class="font-bold">Transaction Security & Support</h3>
+                        <p class="text-sm text-gray-400">If any issues arise, the group is our primary channel for resolving problems. You can post screenshots and communicate directly with admins to ensure a swift resolution. In the rare case of a system fault, being a member is the most secure way for us to return your Pi to the correct wallet.</p>
+                    </div>
+                </div>
+                 <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" /></svg>
+                    <div>
+                        <h3 class="font-bold">Stay Updated and Informed</h3>
+                        <p class="text-sm text-gray-400">Get the latest news on Pi Network developments, market rates, and future progress. We also post updates on pending and completed transaction batches in the group for full transparency.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.962A3.375 3.375 0 019 12.125v1.5a3.375 3.375 0 01-3.375 3.375H3.375A3.375 3.375 0 010 13.625v-1.5A3.375 3.375 0 013.375 8.625h1.5A3.375 3.375 0 019 12.125v1.5a3.375 3.375 0 01-3.375 3.375M9 12.125v1.5a3.375 3.375 0 003.375 3.375h1.5A3.375 3.375 0 0018 13.625v-1.5A3.375 3.375 0 0014.625 8.625h-1.5A3.375 3.375 0 009 12.125z" /></svg>
+                    <div>
+                        <h3 class="font-bold">A Hub for the Pi Community</h3>
+                        <p class="text-sm text-gray-400">Our group is a place to communicate and exchange information with fellow enthusiasts about Pi and the wider crypto world.</p>
+                    </div>
+                </div>
+             </div>
+
+             <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="block w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-lg my-6 text-center">Join the PiCoinPH Facebook Group</a>
+             <button id="fb-continue-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">I Have Joined, Continue to App</button>
+        </div>
+
+
+        <main id="main-view" class="hidden space-y-6">
+
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 1: Transfer Your Pi</h3>
+                 <div class="space-y-4">
+                    <p class="text-sm text-gray-400">Use the buttons below to open your Pi Browser and access your Pi Wallet.</p>
+                    
+                    <div id="app-launchers" class="bg-gray-800 p-4 rounded-lg">
+                        <p id="launcher-title" class="text-center font-semibold mb-3">Quick App Launchers</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <a href="intent://#Intent;package=com.blockchainvault;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
+                            <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
+                            <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+                        </div>
+                        <div id="pc-instructions" class="hidden mt-3 text-center text-sm text-gray-400">
+                            <p>It looks like you're on a PC. Please use your phone and install these apps to proceed.</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <p>Transfer the amount of Pi you want to exchange to this exact wallet address:</p>
+                        <div class="mt-2 flex items-center bg-gray-700 p-2 rounded-md">
+                            <input id="pi-wallet-address" readonly class="bg-transparent font-mono text-base sm:text-lg w-full text-amber-400" value="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
+                            <button id="copy-address-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                            </button>
+                        </div>
+                        <p class="text-xs mt-2 text-yellow-300">Warning: Double-check the address. Use the copy button to avoid mistakes. Crypto transfers are irreversible.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-lg text-center shadow-lg">
+                <h2 class="text-lg font-medium text-white flex justify-center items-baseline gap-x-1.5">
+                    <span>Direct to</span>
+                    <span class="font-bold text-blue-500 text-2xl" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.6);">GCASH</span>
+                    <span>rates</span>
+                </h2>
+                <p id="gcash-rate" class="text-6xl md:text-7xl font-black text-lime-400 my-2" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.9);">Loading...</p>
+                <p class="text-xs text-indigo-300">rates auto refresh, wait patiently</p>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 2: Submit Your Transaction</h3>
+                <p class="text-sm text-gray-400 mb-4">After you have sent the Pi, fill out this form to notify the admin. Payment will be sent to the GCash number you provide.</p>
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label for="transaction-id-display" class="block text-sm font-medium text-gray-300">Your Unique Transaction ID (auto-generated)</label>
+                        <input type="text" id="transaction-id-display" name="transaction-id-display" readonly class="mt-1 block w-full bg-gray-700/50 border-gray-600 rounded-md shadow-sm text-purple-400 font-mono text-center sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="pi-wallet-source" class="block text-sm font-medium text-gray-300">Your Pi Wallet Source Address</label>
+                        <input type="text" id="pi-wallet-source" name="pi-wallet-source" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="pi-sent" class="block text-sm font-medium text-gray-300">Amount of Pi You Sent (π)</label>
+                        <input type="number" id="pi-sent" name="pi-sent" step="any" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-name" class="block text-sm font-medium text-gray-300">Your Full GCash Name</label>
+                        <input type="text" id="gcash-name" name="gcash-name" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="gcash-number" class="block text-sm font-medium text-gray-300">Your GCash Number (e.g. 0917...)</label>
+                        <input type="text" id="gcash-number" name="gcash-number" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    <div>
+                        <label for="transaction-datetime" class="block text-sm font-medium text-gray-300">Date & Time of Pi Transfer</label>
+                        <input type="datetime-local" id="transaction-datetime" name="transaction-datetime" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm text-white focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3">
+                    </div>
+                    
+                     <button type="submit" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">I Have Sent the Pi, Submit for Verification</button>
+                </form>
+            </div>
+
+            <div class="bg-gray-900/50 p-6 rounded-lg text-center border border-purple-500">
+                <h3 class="text-lg font-medium text-gray-300">Expected GCash Payment</h3>
+                <p id="expected-payment-el" class="text-4xl font-bold text-purple-400 my-2">₱0.00</p>
+                <p class="text-xs text-gray-400">A ₱20.00 platform fee is deducted to maintain the app and support development.</p>
+            </div>
+
+             <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 3: Submit Proof of Transfer</h3>
+                <p class="text-sm text-gray-400">To help verify your transaction, capture a screenshot of the successful Pi transfer and post it in our Facebook Group for reference: 
+                    <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="text-base font-bold text-orange-400 hover:underline">PiCoinPH</a>.
+                </p>
+            </div>
+
+             <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 4: Wait for Verification</h3>
+                <p class="text-sm text-gray-400">Wait for the admin to verify the transfer and send your payment. You can track the status in "My Transactions" below.</p>
+            </div>
+
+
+             <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 text-white">My Transactions</h3>
+                <div id="transactions-list" class="space-y-3">
+                    <p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>
+                </div>
+            </div>
+            
+            <footer class="text-center py-4">
+                <p class="text-sm text-gray-400">
+                    <span class="font-bold">Pi Live Market Price:</span> 
+                    <span id="pi-price" class="font-semibold text-gray-200">Loading...</span>
+                    <span id="price-timestamp" class="text-gray-500 text-xs block"></span>
+                </p>
+                 <p class="text-xs text-gray-500 mb-4">Rate updated every 20 seconds.</p>
+
+                 <div class="flex justify-center items-center space-x-4">
+                    <a href="https://minepi.com/" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">Pi Network</a>
+                    <a href="https://www.coingecko.com/en/coins/pi-network/php" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">CoinGecko</a>
+                    <a href="https://www.okx.com/account/login" target="_blank" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-2 px-4 rounded-lg transition">OKX</a>
+                 </div>
+            </footer>
+
+        </main>
+    </div>
+
+    <script type="module">
+        console.log("Script starting...");
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        // =================================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBumvw88DWTczxuIreeT6SaXGpwrs3O-rE",
+            authDomain: "pi-gcash-p2p-app.firebaseapp.com",
+            projectId: "pi-gcash-p2p-app",
+            storageBucket: "pi-gcash-p2p-app.appspot.com",
+            messagingSenderId: "148063854165",
+            appId: "1:148063854165:web:cd335ca3af278034e4fedc",
+            measurementId: "G-VVG58MWN3F"
+        };
+        // =================================================================================
+
+        // --- INITIALIZE FIREBASE ---
+        let app, auth, db;
+        try {
+            console.log("Initializing Firebase App...");
+            app = initializeApp(firebaseConfig);
+            console.log("Firebase App Initialized.");
+            console.log("Initializing Firebase Auth...");
+            auth = getAuth(app);
+            console.log("Firebase Auth Initialized.");
+            console.log("Initializing Firebase Firestore...");
+            db = getFirestore(app);
+            console.log("Firebase Firestore Initialized.");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            document.getElementById('loading-view').textContent = 'Error: Could not connect to services. Please refresh.';
+        }
+
+        // --- STATE MANAGEMENT ---
+        let user = null;
+        let piPrice = 0;
+        let currentGcashRate = 0;
+        let transactionsUnsubscribe = null;
+        let priceUnsubscribe = null; // To hold the price listener
+
+        // --- UI ELEMENT REFERENCES ---
+        const views = {
+            loading: document.getElementById('loading-view'),
+            login: document.getElementById('login-view'),
+            fbGate: document.getElementById('fb-gate-view'),
+            main: document.getElementById('main-view'),
+        };
+        const appHeader = document.getElementById('app-header');
+        const userInfoEl = document.getElementById('user-info');
+        const loginBtn = document.getElementById('login-btn');
+        const fbContinueBtn = document.getElementById('fb-continue-btn');
+        const piPriceEl = document.getElementById('pi-price');
+        const priceTimestampEl = document.getElementById('price-timestamp');
+        const gcashRateEl = document.getElementById('gcash-rate');
+        const copyAddressBtn = document.getElementById('copy-address-btn');
+        const transactionForm = document.getElementById('transaction-form');
+        const piSentInput = document.getElementById('pi-sent');
+        const expectedPaymentEl = document.getElementById('expected-payment-el');
+        const transactionsList = document.getElementById('transactions-list');
+        const pcInstructions = document.getElementById('pc-instructions');
+        const txIdDisplay = document.getElementById('transaction-id-display');
+        
+        // --- VIEW MANAGEMENT ---
+        function showView(viewName) {
+            Object.values(views).forEach(view => {
+                if (view) view.classList.add('hidden');
+            });
+            if (views[viewName]) {
+                views[viewName].classList.remove('hidden');
+            }
+            if (appHeader) {
+                appHeader.classList.toggle('hidden', viewName !== 'main');
+            }
+        }
+        
+        function enterMainApp() {
+            if (!user) return;
+            userInfoEl.innerHTML = `
+                <span>${user.displayName} (${user.email})</span>
+                <div class="flex items-center justify-center mt-1">
+                    <span class="text-xs text-gray-400 mr-1">User ID:</span>
+                    <span class="font-mono text-yellow-400 text-xs">${user.uid}</span>
+                    <button id="copy-user-id-btn" class="ml-2 text-gray-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                    </button>
+                    <button id="logout-btn" class="ml-4 text-red-500 hover:text-red-400 font-bold">Logout</button>
+                </div>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            document.getElementById('copy-user-id-btn').addEventListener('click', () => handleCopy(user.uid, 'User ID copied!'));
+            showView('main');
+            listenForPriceChanges();
+            listenForTransactions();
+        }
+
+        // --- EVENT HANDLERS ---
+        async function handleLogin() {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+                alert(`Login failed: ${error.message}`);
+            }
+        }
+
+        function handleLogout() {
+            signOut(auth);
+        }
+
+        function handleCopy(textToCopy, message) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert(message);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+        
+        function listenForPriceChanges() {
+            if (priceUnsubscribe) priceUnsubscribe();
+
+            console.log("Setting up Firestore listener for Pi Price...");
+            const priceDocRef = doc(db, "marketData", "piPrice");
+
+            priceUnsubscribe = onSnapshot(priceDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    piPrice = data.price;
+                    currentGcashRate = Math.floor(piPrice * 0.70);
+                    const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
+
+                    piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
+                    priceTimestampEl.textContent = `as of ${timestamp}`;
+                    gcashRateEl.textContent = `₱${currentGcashRate}`;
+                    calculateExpectedPayment();
+                    console.log(`Real-time price update from Firestore: ${piPrice}`);
+                } else {
+                    console.log("Price document does not exist yet.");
+                    piPriceEl.textContent = 'Waiting for data...';
+                    gcashRateEl.textContent = 'Waiting...';
+                }
+            }, (error) => {
+                console.error("Error listening to price changes:", error);
+                piPriceEl.textContent = 'Unavailable';
+                gcashRateEl.textContent = 'Unavailable';
+            });
+        }
+
+        function calculateExpectedPayment() {
+            const piAmount = parseFloat(piSentInput.value);
+
+            if (isNaN(piAmount) || piAmount <= 0) {
+                expectedPaymentEl.textContent = '₱0.00';
+                return;
+            }
+            
+            const expectedTotal = (piAmount * currentGcashRate) - 20;
+
+            if (expectedTotal < 0) {
+                expectedPaymentEl.textContent = 'Amount too low';
+                expectedPaymentEl.classList.add('text-red-500');
+            } else {
+                expectedPaymentEl.textContent = `₱${expectedTotal.toFixed(2)}`;
+                expectedPaymentEl.classList.remove('text-red-500');
+            }
+        }
+        
+        function generateTransactionId() {
+            const prefix = 'P2G-';
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            return `${prefix}${randomPart}`;
+        }
+
+        async function handleSubmitTransaction(e) {
+            e.preventDefault();
+            if (!user) {
+                alert("You must be logged in to submit a transaction.");
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const transactionData = {
+                userId: user.uid,
+                userEmail: user.email,
+                piSent: parseFloat(formData.get('pi-sent')),
+                gcashName: formData.get('gcash-name'),
+                gcashNumber: formData.get('gcash-number'),
+                piWalletSource: formData.get('pi-wallet-source'),
+                transactionTime: new Date(formData.get('transaction-datetime')),
+                status: 'Pending Verification',
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                const docRef = await addDoc(collection(db, "transactions"), transactionData);
+                const transactionId = docRef.id;
+
+                await updateDoc(docRef, { transactionId: transactionId });
+                
+                console.log("Transaction submitted with GUARANTEED unique ID: ", transactionId);
+                alert("Transaction submitted successfully! Your Reference ID is " + transactionId);
+                
+                e.target.reset();
+                txIdDisplay.value = '';
+                calculateExpectedPayment();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert(`Error submitting transaction: ${error.message}`);
+            }
+        }
+        
+        function listenForTransactions() {
+             if (transactionsUnsubscribe) transactionsUnsubscribe();
+            if (!user) return;
+            
+            console.log("Setting up Firestore listener for user:", user.uid);
+            const q = query(collection(db, "transactions"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+            
+            transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                console.log("Received transaction update from Firestore.");
+                transactionsList.innerHTML = '';
+                if (querySnapshot.empty) {
+                    transactionsList.innerHTML = `<p class="text-gray-500 text-center">Your submitted transactions will appear here.</p>`;
+                    return;
+                }
+                querySnapshot.forEach((doc) => {
+                    const tx = doc.data();
+                    const date = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'Just now';
+                    
+                    let statusColor = 'text-yellow-400';
+                    if (tx.status === 'Paid') statusColor = 'text-green-400';
+                    if (tx.status === 'Rejected') statusColor = 'text-red-400';
+
+                    const txElement = document.createElement('div');
+                    txElement.className = 'bg-gray-700 p-3 rounded-md text-sm';
+                    txElement.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="font-bold">Sent ${tx.piSent}π</p>
+                            <p class="${statusColor} font-semibold">${tx.status}</p>
+                        </div>
+                        <p class="text-xs text-gray-400">GCash: ${tx.gcashNumber}</p>
+                        <p class="text-xs text-purple-300 font-mono">ID: ${tx.transactionId || 'N/A'}</p>
+                        <p class="text-xs text-gray-500 mt-1">${date}</p>
+                    `;
+                    transactionsList.appendChild(txElement);
+                });
+            }, (error) => {
+                 console.error("Error listening to transactions: ", error);
+            });
+        }
+
+
+        // --- MAIN INITIALIZATION ---
+        function initApp() {
+            onAuthStateChanged(auth, (currentUser) => {
+                user = currentUser;
+                if (user) {
+                    if (localStorage.getItem('fb_gate_passed') === 'true') {
+                        enterMainApp();
+                    } else {
+                        showView('fbGate');
+                    }
+                } else {
+                    if (transactionsUnsubscribe) transactionsUnsubscribe();
+                    if (priceUnsubscribe) priceUnsubscribe();
+                    showView('login');
+                }
+            });
+
+            loginBtn.addEventListener('click', handleLogin);
+            fbContinueBtn.addEventListener('click', () => {
+                localStorage.setItem('fb_gate_passed', 'true');
                 enterMainApp();
+            });
+            copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
+            transactionForm.addEventListener('submit', handleSubmitTransaction);
+            piSentInput.addEventListener('input', calculateExpectedPayment);
+            transactionForm.addEventListener('focusin', (event) => {
+                if (!txIdDisplay.value && event.target.name !== 'transaction-id-display') {
+                    txIdDisplay.value = generateTransactionId();
+                }
+            });
+            
+            if (!/Mobi|Android/i.test(navigator.userAgent)) {
+                pcInstructions.classList.remove('hidden');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
             });
             copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
