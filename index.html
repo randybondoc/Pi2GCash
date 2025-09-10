@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Wednesday, September 10, 2025 at 4:55 PM PST
+    Timestamp: Thursday, September 11, 2025 at 6:01 AM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -16,6 +16,8 @@
 	- Revised: The copyAddressBtn event listener now correctly copies the value from the dynamic input field.
 	- Revised: The fetchPrice function was renamed to fetchPriceAndWallet to also include fetching the wallet address on demand.
 	- Deleted: The localStorage check for fb_gate_passed has been completely removed to ensure the Facebook gate is a constant first page.
+	- **FIXED**: The user authentication flow has been corrected so that the login view is shown first if the user is not authenticated. The Facebook invitation page is now only shown after a successful login.
+    - **FIXED**: Removed the redundant and incorrect `DOMContentLoaded` listener at the end of the script. The authentication check is now centralized within the `initApp` function to prevent the "race condition" that caused the views to overlap.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -639,20 +641,22 @@
 
         // --- MAIN INITIALIZATION ---
         function initApp() {
-            // New logic: always show the Facebook gate first, then handle login
+            // CENTRALIZED AUTHENTICATION CHECK: This is the correct place to handle the initial view logic.
+            // onAuthStateChanged is the Firebase function that reliably tells us if a user is logged in.
             onAuthStateChanged(auth, (currentUser) => {
                 user = currentUser;
                 if (user) {
+                    // If the user is logged in, show the Facebook gate.
                     showView('fbGate');
                 } else {
-                    if (transactionsUnsubscribe) transactionsUnsubscribe();
+                    // If not logged in, show the login screen.
                     showView('login');
                 }
             });
 
             loginBtn.addEventListener('click', handleLogin);
             
-            // New logic: The Facebook gate now redirects to the main app only when the user is logged in
+            // The Facebook gate now redirects to the main app only when the user is logged in.
             fbContinueBtn.addEventListener('click', () => {
                 if (user) {
                     enterMainApp();
@@ -679,7 +683,7 @@
                 }, 500);
             });
             
-            // New logic: Register user activity listeners to reset the inactivity timer
+            // Register user activity listeners to reset the inactivity timer
             ['mousemove', 'mousedown', 'keydown', 'touchstart'].forEach(event => {
                 document.addEventListener(event, handleUserActivity, { passive: true });
             });
@@ -691,6 +695,7 @@
             }
         }
         
+        // This is the ONE AND ONLY entry point for the app.
         document.addEventListener('DOMContentLoaded', initApp);
         
         // Initial fetch of wallet address on page load
@@ -709,14 +714,6 @@
                  piWalletAddressInput.value = "Error fetching address";
             }
         }
-        
-        // Override the initial loading logic to prioritize fetching the wallet address
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchPiWalletAddress().then(() => {
-                showView('fbGate');
-            });
-        });
-
     </script>
 </body>
 </html>
