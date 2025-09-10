@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Wednesday, September 10, 2025 at 3:20 AM PST
+    Timestamp: Wednesday, September 11, 2025 at 12:04 AM PST
     File Name: admin.html
     Full File Path: admin.html
 
@@ -24,11 +24,14 @@
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
         .action-button { transition: all 0.2s ease-in-out; }
         .action-button:hover { transform: scale(1.05); }
+        .filter-button.active {
+            background-color: #3B82F6;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-gray-200">
 
-    <!-- Login View -->
     <div id="login-view" class="min-h-screen flex items-center justify-center">
         <div class="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-w-sm">
             <div class="text-center mb-6">
@@ -43,18 +46,16 @@
         </div>
     </div>
 
-    <!-- Dashboard View -->
     <div id="dashboard-view" class="hidden">
         <header class="bg-gray-900 shadow-md p-4 flex justify-between items-center sticky top-0 z-50">
             <div>
-                <h1 class="text-xl font-bold text-white">Pending Transactions</h1>
+                <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
                 <p id="admin-email" class="text-xs text-gray-400"></p>
             </div>
             <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
         </header>
 
         <main class="p-4 md:p-6 space-y-6">
-            <!-- Quick App Launchers -->
             <div class="bg-gray-700 p-4 rounded-lg">
                 <p class="text-center font-semibold mb-3 text-white">Quick App Launchers</p>
                 <div class="grid grid-cols-3 gap-2">
@@ -63,10 +64,16 @@
                     <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
                 </div>
             </div>
-
-            <!-- Pending Transactions List -->
-            <div id="pending-list" class="space-y-4">
-                <p id="loading-transactions" class="text-center text-gray-400 py-10">Loading pending transactions...</p>
+            
+            <div class="bg-gray-700 p-3 rounded-lg flex flex-wrap justify-around text-center gap-2 text-sm font-semibold">
+                <button data-status="Pending Verification" class="filter-button py-2 px-4 rounded-md transition active">Pending</button>
+                <button data-status="In Progress" class="filter-button py-2 px-4 rounded-md transition">In Progress</button>
+                <button data-status="Paid" class="filter-button py-2 px-4 rounded-md transition">Paid</button>
+                <button data-status="Rejected" class="filter-button py-2 px-4 rounded-md transition">Rejected</button>
+            </div>
+            
+            <div id="transactions-list" class="space-y-4">
+                <p id="loading-transactions" class="text-center text-gray-400 py-10">Loading transactions...</p>
             </div>
         </main>
     </div>
@@ -103,17 +110,19 @@
         const loginBtn = document.getElementById('login-btn');
         const loginError = document.getElementById('login-error');
         const logoutBtn = document.getElementById('logout-btn');
-        const pendingList = document.getElementById('pending-list');
+        const transactionsList = document.getElementById('transactions-list');
         const adminEmailEl = document.getElementById('admin-email');
+        const filterButtons = document.querySelectorAll('.filter-button');
         
         let transactionsUnsubscribe = null;
+        let currentFilter = 'Pending Verification';
 
         // --- FUNCTIONS ---
         function showDashboard(user) {
             adminEmailEl.textContent = user.email;
             loginView.classList.add('hidden');
             dashboardView.classList.remove('hidden');
-            listenForPendingTransactions();
+            listenForTransactions();
         }
 
         function showLogin(errorMsg = '') {
@@ -139,15 +148,19 @@
             signOut(auth);
         }
 
-        function listenForPendingTransactions() {
+        function listenForTransactions() {
             if (transactionsUnsubscribe) transactionsUnsubscribe();
 
-            const q = query(collection(db, "transactions"), where("status", "==", "Pending Verification"), orderBy("createdAt", "asc"));
+            const q = query(
+                collection(db, "transactions"), 
+                where("status", "==", currentFilter), 
+                orderBy("createdAt", "desc")
+            );
 
             transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
-                pendingList.innerHTML = ''; 
+                transactionsList.innerHTML = ''; 
                 if (querySnapshot.empty) {
-                    pendingList.innerHTML = `<p class="text-center text-gray-400 py-10">No pending transactions found.</p>`;
+                    transactionsList.innerHTML = `<p class="text-center text-gray-400 py-10">No transactions found with status: ${currentFilter}</p>`;
                 } else {
                     querySnapshot.forEach(doc => {
                         renderTransaction(doc.id, doc.data());
@@ -155,8 +168,15 @@
                 }
             }, (error) => {
                 console.error("Error fetching transactions: ", error);
-                pendingList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading transactions. Check console for permissions error.</p>`;
+                transactionsList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading transactions. Check console for permissions error.</p>`;
             });
+        }
+        
+        function updateFilter(e) {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            currentFilter = e.target.dataset.status;
+            listenForTransactions();
         }
 
         function renderTransaction(id, tx) {
@@ -172,9 +192,39 @@
                 const paymentAmount = (tx.piSent * tx.rateAtSubmission) - 20.00;
                 paymentDueHTML = `<p class="text-3xl font-bold text-green-400">₱${paymentAmount.toFixed(2)}</p>`;
             }
-
+            
+            let actionButtonsHTML = '';
+            let statusColor = 'text-yellow-400';
+            
+            switch(tx.status) {
+                case 'Pending Verification':
+                    actionButtonsHTML = `
+                        <button data-id="${id}" data-status="In Progress" class="action-button update-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-5 rounded-md text-sm">Start Processing</button>
+                        <button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
+                    `;
+                    statusColor = 'text-yellow-400';
+                    break;
+                case 'In Progress':
+                    actionButtonsHTML = `
+                        <button data-id="${id}" data-status="Paid" class="action-button update-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md text-sm">Mark as Paid</button>
+                        <button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
+                    `;
+                    statusColor = 'text-blue-400';
+                    break;
+                case 'Paid':
+                    actionButtonsHTML = `<span class="text-sm font-semibold text-green-400">Transaction Complete</span>`;
+                    statusColor = 'text-green-400';
+                    break;
+                case 'Rejected':
+                    actionButtonsHTML = `<span class="text-sm font-semibold text-red-400">Transaction Rejected</span>`;
+                    statusColor = 'text-red-400';
+                    break;
+            }
 
             txElement.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm font-semibold py-1 px-3 rounded-full bg-gray-600 ${statusColor.replace('text-', 'bg-')}-700/50">${tx.status}</span>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                         <p class="font-bold text-cyan-400">Transaction Details</p>
@@ -198,27 +248,24 @@
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-600">
                     <label for="admin-note-${id}" class="block text-sm font-medium text-gray-400 mb-1">Admin Note (visible to user)</label>
-                    <input type="text" id="admin-note-${id}" class="admin-note-input w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="e.g., GCash sent, waiting for confirmation...">
+                    <input type="text" id="admin-note-${id}" class="admin-note-input w-full bg-gray-600 text-white rounded-md p-2 text-sm" value="${tx.adminNote || ''}" placeholder="e.g., GCash sent, waiting for confirmation...">
                     <div class="mt-3 flex justify-end items-center gap-3">
-                        <button data-id="${id}" class="action-button reject-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
-                        <button data-id="${id}" class="action-button approve-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md text-sm">Approve</button>
+                        ${actionButtonsHTML}
                     </div>
                 </div>
             `;
-            pendingList.appendChild(txElement);
+            transactionsList.appendChild(txElement);
         }
 
         async function handleTransactionUpdate(e) {
-            const button = e.target.closest('.action-button');
+            const button = e.target.closest('.update-btn');
             if (!button) return;
 
             const transactionId = button.dataset.id;
+            const newStatus = button.dataset.status;
             const parentElement = document.querySelector(`[data-transaction-id="${transactionId}"]`);
             const noteInput = parentElement.querySelector('.admin-note-input');
             const adminNoteText = noteInput.value.trim();
-
-            const isApproved = button.classList.contains('approve-btn');
-            const newStatus = isApproved ? 'Paid' : 'Rejected';
 
             button.disabled = true;
             button.textContent = 'Updating...';
@@ -233,7 +280,7 @@
                 console.error("Failed to update transaction:", error);
                 alert("Error: Could not update transaction status.");
                 button.disabled = false;
-                button.textContent = isApproved ? 'Approve' : 'Reject';
+                button.textContent = `Update to ${newStatus}`;
             }
         }
 
@@ -256,7 +303,10 @@
             
             loginBtn.addEventListener('click', handleLogin);
             logoutBtn.addEventListener('click', handleLogout);
-            pendingList.addEventListener('click', handleTransactionUpdate);
+            transactionsList.addEventListener('click', handleTransactionUpdate);
+            filterButtons.forEach(button => {
+                button.addEventListener('click', updateFilter);
+            });
         }
 
         init();
@@ -264,4 +314,3 @@
 
 </body>
 </html>
-
