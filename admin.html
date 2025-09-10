@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Wednesday, September 11, 2025 at 12:04 AM PST
+    Timestamp: Wednesday, September 11, 2025 at 3:58 AM PST
     File Name: admin.html
     Full File Path: admin.html
 
@@ -7,10 +7,12 @@
     This is a secure dashboard for the Pi2GCash administrator. It requires the admin to sign in with an authorized Google account. Once authenticated, it displays a real-time list of pending transactions, allowing the admin to approve or reject them and add a corresponding note for the user.
 
     Modifications Made in This Version:
-    - Added the "Quick App Launchers" section to the main dashboard for convenient access to Pi Network, Pi Browser, and GCash, as requested.
-    - Added the "Rate at Submission" to the transaction details card. This displays the historical GCash exchange rate that was active when the user created the transaction, providing critical context for payment processing.
-    - Added a "GCash Payment Due" calculation to each transaction card. It automatically multiplies the Pi sent by the historical rate and subtracts the ₱20 platform fee, showing the admin the exact amount to pay out.
-    - The 'renderTransaction' function was updated to perform and display this calculation.
+	- Added: A new HTML section for the "Manage Pi Wallet Address" editor. It contains an input field and a "Save" button.
+	- Added: The getDoc and setDoc modules were imported.
+	- Added: A new fetchWalletAddress function that retrieves the current wallet address from a new Firestore document at marketData/piWallet and populates the input field. If the document doesn't exist, it creates it with a default value.
+	- Added: A new saveWalletAddress function. This function uses the updateDoc method to save a new wallet address to Firestore, allowing the admin to change the address users see.
+	- Revised: The showDashboard function now calls fetchWalletAddress() to ensure the input field is populated with the latest data from the database.
+	- Revised: The "Save" button now shows a "Saving..." state with a spinner during the update and a "Saved!" message upon success for better user feedback.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -65,6 +67,15 @@
                 </div>
             </div>
             
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <h3 class="font-semibold text-white mb-3">Manage Pi Wallet Address</h3>
+                <label for="pi-wallet-address-input" class="block text-sm font-medium text-gray-400 mb-1">Current Public Wallet Address:</label>
+                <input type="text" id="pi-wallet-address-input" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
+                <button id="save-wallet-btn" class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition flex justify-center items-center">
+                    Save New Address
+                </button>
+            </div>
+            
             <div class="bg-gray-700 p-3 rounded-lg flex flex-wrap justify-around text-center gap-2 text-sm font-semibold">
                 <button data-status="Pending Verification" class="filter-button py-2 px-4 rounded-md transition active">Pending</button>
                 <button data-status="In Progress" class="filter-button py-2 px-4 rounded-md transition">In Progress</button>
@@ -83,7 +94,8 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // New import for updateDoc, setDoc
 
         // --- USE THE SAME FIREBASE CONFIG AS YOUR MAIN APP ---
         const firebaseConfig = {
@@ -113,6 +125,8 @@
         const transactionsList = document.getElementById('transactions-list');
         const adminEmailEl = document.getElementById('admin-email');
         const filterButtons = document.querySelectorAll('.filter-button');
+        const piWalletAddressInput = document.getElementById('pi-wallet-address-input');
+        const saveWalletBtn = document.getElementById('save-wallet-btn');
         
         let transactionsUnsubscribe = null;
         let currentFilter = 'Pending Verification';
@@ -122,6 +136,7 @@
             adminEmailEl.textContent = user.email;
             loginView.classList.add('hidden');
             dashboardView.classList.remove('hidden');
+            fetchWalletAddress();
             listenForTransactions();
         }
 
@@ -283,6 +298,57 @@
                 button.textContent = `Update to ${newStatus}`;
             }
         }
+        
+        async function fetchWalletAddress() {
+            const walletDocRef = doc(db, "marketData", "piWallet");
+            try {
+                const docSnap = await getDoc(walletDocRef);
+                if (docSnap.exists() && docSnap.data().address) {
+                    piWalletAddressInput.value = docSnap.data().address;
+                } else {
+                    // Create the document if it doesn't exist
+                    await setDoc(walletDocRef, { address: "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB" });
+                    piWalletAddressInput.value = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
+                }
+            } catch (error) {
+                console.error("Error fetching wallet address:", error);
+                piWalletAddressInput.placeholder = "Error loading address.";
+            }
+        }
+
+        async function saveWalletAddress() {
+            const newAddress = piWalletAddressInput.value.trim();
+            if (newAddress === '') {
+                alert("The wallet address cannot be empty.");
+                return;
+            }
+
+            const originalBtnText = saveWalletBtn.innerHTML;
+            saveWalletBtn.disabled = true;
+            saveWalletBtn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+            `;
+            
+            const walletDocRef = doc(db, "marketData", "piWallet");
+            try {
+                // Update the document in Firestore
+                await updateDoc(walletDocRef, { address: newAddress });
+                saveWalletBtn.innerHTML = 'Saved!';
+                setTimeout(() => {
+                    saveWalletBtn.innerHTML = originalBtnText;
+                    saveWalletBtn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                console.error("Error saving new wallet address:", error);
+                alert("Failed to save address. Check console for details.");
+                saveWalletBtn.innerHTML = originalBtnText;
+                saveWalletBtn.disabled = false;
+            }
+        }
 
         // --- MAIN INITIALIZATION ---
         function init() {
@@ -307,6 +373,7 @@
             filterButtons.forEach(button => {
                 button.addEventListener('click', updateFilter);
             });
+            saveWalletBtn.addEventListener('click', saveWalletAddress);
         }
 
         init();

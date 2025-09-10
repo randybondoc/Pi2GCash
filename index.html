@@ -7,10 +7,15 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Added a workaround for social media in-app browsers (WebViews) that block the Quick App Launcher buttons.
-    - A new JavaScript function, 'detectInAppBrowser', was created to check the navigator.userAgent for identifiers specific to Facebook's WebView.
-    - A new hidden HTML block ('webview-warning') was added with a message explaining the limitation and a "Copy Page Link" button.
-    - The main 'initApp' function now calls the detection logic. If a WebView is detected, it hides the non-functional launcher buttons and shows the warning and copy button instead, guiding the user to open the app in a full browser.
+    - Added: A new inactivityTimer and a constant INACTIVITY_TIMEOUT_MS (set to 3 minutes or 180,000ms).
+	- Added: The resetInactivityTimer and handleUserActivity functions, which work together to detect user activity and trigger the timeout.
+	- Added: Event listeners for mousemove, mousedown, keydown, and touchstart to call handleUserActivity and reset the timer.
+	- Revised: The initApp function. It now always calls showView('fbGate') first. The onAuthStateChanged block now correctly handles the login state but always returns to the Facebook gate view.
+	- Revised: The fbContinueBtn event listener now checks if the user is authenticated (if (user)) before redirecting to the main app, ensuring a proper login flow.
+	- Revised: The Pi wallet address is no longer hardcoded. A new fetchPiWalletAddress function now uses getDoc to read the address from the marketData/piWallet document in Firestore. The value is then used to update the <input> element.
+	- Revised: The copyAddressBtn event listener now correctly copies the value from the dynamic input field.
+	- Revised: The fetchPrice function was renamed to fetchPriceAndWallet to also include fetching the wallet address on demand.
+	- Deleted: The localStorage check for fb_gate_passed has been completely removed to ensure the Facebook gate is a constant first page.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -304,6 +309,8 @@
         let currentGcashRate = 0;
         let transactionsUnsubscribe = null;
         let debounceTimer;
+        let inactivityTimer;
+        const INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes
 
         // --- UI ELEMENT REFERENCES ---
         const views = {
@@ -319,6 +326,7 @@
         const piPriceEl = document.getElementById('pi-price');
         const priceTimestampEl = document.getElementById('price-timestamp');
         const gcashRateEl = document.getElementById('gcash-rate');
+        const piWalletAddressInput = document.getElementById('pi-wallet-address');
         const copyAddressBtn = document.getElementById('copy-address-btn');
         const transactionForm = document.getElementById('transaction-form');
         const submitBtn = document.getElementById('submit-btn');
@@ -329,7 +337,6 @@
         const appLaunchers = document.getElementById('app-launchers');
         const webviewWarning = document.getElementById('webview-warning');
         const copyLinkBtn = document.getElementById('copy-link-btn');
-
         
         // --- TOAST NOTIFICATION FUNCTION ---
         function showToast(message, type = 'success') {
@@ -365,7 +372,10 @@
         }
         
         function enterMainApp() {
-            if (!user) return;
+            if (!user) {
+                showView('fbGate');
+                return;
+            }
             userInfoEl.innerHTML = `
                 <p>${user.displayName} (${user.email})</p>
                 <div class="flex items-center justify-center mt-1">
@@ -382,39 +392,64 @@
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
             document.getElementById('copy-user-id-btn').addEventListener('click', () => handleCopy(user.uid, 'User ID copied!'));
             showView('main');
-            fetchPrice(); // Fetch price on initial load
+            fetchPriceAndWallet();
             listenForTransactions();
+            resetInactivityTimer();
         }
 
+        // --- INACTIVITY LOGIC ---
+        const resetInactivityTimer = () => {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                console.log("3 minutes of inactivity detected. Redirecting to Facebook gate.");
+                if (user) {
+                    signOut(auth);
+                }
+                showView('fbGate');
+            }, INACTIVITY_TIMEOUT_MS);
+        };
+        const handleUserActivity = () => resetInactivityTimer();
+
+
         // --- EVENT HANDLERS & LOGIC ---
-        async function fetchPrice() {
-            console.log("Fetching Pi Price...");
+        async function fetchPriceAndWallet() {
+            console.log("Fetching Pi Price and Wallet Address...");
             const priceDocRef = doc(db, "marketData", "piPrice");
+            const walletDocRef = doc(db, "marketData", "piWallet");
+            
             try {
-                const docSnap = await getDoc(priceDocRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
+                // Fetch price
+                const priceSnap = await getDoc(priceDocRef);
+                if (priceSnap.exists()) {
+                    const data = priceSnap.data();
                     piPrice = data.price;
                     currentGcashRate = Math.floor(piPrice * 0.70);
                     const timestamp = data.updatedAt ? data.updatedAt.toDate().toLocaleString() : new Date().toLocaleString();
-
                     piPriceEl.textContent = `₱${piPrice.toFixed(2)}`;
                     priceTimestampEl.textContent = `as of ${timestamp}`;
                     gcashRateEl.textContent = `₱${currentGcashRate}`;
-                    calculateExpectedPayment(); // Recalculate after fetching new price
+                    calculateExpectedPayment();
                     console.log(`Price updated from Firestore: ${piPrice}`);
                 } else {
-                    console.log("Price document does not exist yet.");
                     piPriceEl.textContent = 'Waiting for data...';
                     gcashRateEl.textContent = 'Waiting...';
                 }
+
+                // Fetch wallet address
+                const walletSnap = await getDoc(walletDocRef);
+                if (walletSnap.exists() && walletSnap.data().address) {
+                    piWalletAddressInput.value = walletSnap.data().address;
+                } else {
+                    piWalletAddressInput.value = "Wallet address unavailable";
+                }
             } catch (error) {
-                 console.error("Error fetching price:", error);
-                piPriceEl.textContent = 'Unavailable';
-                gcashRateEl.textContent = 'Unavailable';
+                 console.error("Error fetching data:", error);
+                 piPriceEl.textContent = 'Unavailable';
+                 gcashRateEl.textContent = 'Unavailable';
+                 piWalletAddressInput.value = "Error fetching address";
             }
         }
-
+        
         async function handleLogin() {
             const provider = new GoogleAuthProvider();
             try {
@@ -604,14 +639,11 @@
 
         // --- MAIN INITIALIZATION ---
         function initApp() {
+            // New logic: always show the Facebook gate first, then handle login
             onAuthStateChanged(auth, (currentUser) => {
                 user = currentUser;
                 if (user) {
-                    if (localStorage.getItem('fb_gate_passed') === 'true') {
-                        enterMainApp();
-                    } else {
-                        showView('fbGate');
-                    }
+                    showView('fbGate');
                 } else {
                     if (transactionsUnsubscribe) transactionsUnsubscribe();
                     showView('login');
@@ -619,11 +651,17 @@
             });
 
             loginBtn.addEventListener('click', handleLogin);
+            
+            // New logic: The Facebook gate now redirects to the main app only when the user is logged in
             fbContinueBtn.addEventListener('click', () => {
-                localStorage.setItem('fb_gate_passed', 'true');
-                enterMainApp();
+                if (user) {
+                    enterMainApp();
+                } else {
+                    showToast("Please log in first to proceed.", 'error');
+                }
             });
-            copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
+            
+            copyAddressBtn.addEventListener('click', () => handleCopy(piWalletAddressInput.value, 'Pi Wallet Address copied!'));
             copyLinkBtn.addEventListener('click', () => handleCopy(window.location.href, 'Page Link copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             document.getElementById('confirm-submit-btn').addEventListener('click', confirmAndSubmit);
@@ -631,14 +669,19 @@
                 document.getElementById('confirm-modal').classList.add('hidden');
             });
             
-            updatePriceBtn.addEventListener('click', fetchPrice);
+            updatePriceBtn.addEventListener('click', fetchPriceAndWallet);
 
             piSentInput.addEventListener('input', () => {
                 calculateExpectedPayment(); 
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    fetchPrice(); 
+                    fetchPriceAndWallet(); 
                 }, 500);
+            });
+            
+            // New logic: Register user activity listeners to reset the inactivity timer
+            ['mousemove', 'mousedown', 'keydown', 'touchstart'].forEach(event => {
+                document.addEventListener(event, handleUserActivity, { passive: true });
             });
             
             // Detect and handle WebView
@@ -649,6 +692,30 @@
         }
         
         document.addEventListener('DOMContentLoaded', initApp);
+        
+        // Initial fetch of wallet address on page load
+        async function fetchPiWalletAddress() {
+            const walletDocRef = doc(db, "marketData", "piWallet");
+            try {
+                const docSnap = await getDoc(walletDocRef);
+                if (docSnap.exists() && docSnap.data().address) {
+                    piWalletAddressInput.value = docSnap.data().address;
+                } else {
+                    // Fallback to the hardcoded address if the database is not yet set up
+                    piWalletAddressInput.value = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
+                }
+            } catch (error) {
+                console.error("Error fetching wallet address:", error);
+                 piWalletAddressInput.value = "Error fetching address";
+            }
+        }
+        
+        // Override the initial loading logic to prioritize fetching the wallet address
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchPiWalletAddress().then(() => {
+                showView('fbGate');
+            });
+        });
 
     </script>
 </body>
