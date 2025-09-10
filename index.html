@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Wednesday, September 10, 2025 at 3:10 AM PST
+    Timestamp: Wednesday, September 10, 2025 at 4:55 PM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -7,8 +7,10 @@
     This application provides a user interface for Pi Network users in the Philippines to exchange their Pi coins for Philippine Pesos (PHP) via GCash. It features user authentication, real-time price tracking from a secure backend, and a form to submit transaction details to an administrator for manual verification and payment.
 
     Modifications Made in This Version:
-    - Added logic to save the GCash exchange rate at the moment of transaction submission.
-    - The 'handleSubmitTransaction' function now adds a 'rateAtSubmission' field to the transactionData object before saving it to Firestore. This provides historical context for the admin.
+    - Added a workaround for social media in-app browsers (WebViews) that block the Quick App Launcher buttons.
+    - A new JavaScript function, 'detectInAppBrowser', was created to check the navigator.userAgent for identifiers specific to Facebook's WebView.
+    - A new hidden HTML block ('webview-warning') was added with a message explaining the limitation and a "Copy Page Link" button.
+    - The main 'initApp' function now calls the detection logic. If a WebView is detected, it hides the non-functional launcher buttons and shows the warning and copy button instead, guiding the user to open the app in a full browser.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -135,20 +137,24 @@
                  <div class="space-y-4">
                     <p class="text-sm text-gray-400">Use the buttons below to open your Pi Browser and access your Pi Wallet.</p>
                     
-                    <div id="app-launchers" class="bg-gray-800 p-4 rounded-lg">
-                        <p id="launcher-title" class="text-center font-semibold mb-3">Quick App Launchers</p>
+                    <div id="app-launchers" class="bg-gray-700 p-4 rounded-lg">
+                        <p class="text-center font-semibold mb-3">Quick App Launchers</p>
                         <div class="grid grid-cols-3 gap-2">
                             <a href="intent://#Intent;package=com.blockchainvault;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
                             <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
                             <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
                         </div>
-                        <div id="pc-instructions" class="hidden mt-3 text-center text-sm text-gray-400">
-                            <p>It looks like you're on a PC. Please use your phone and install these apps to proceed.</p>
-                        </div>
+                    </div>
+                    
+                    <!-- WebView Warning (Hidden by default) -->
+                    <div id="webview-warning" class="hidden bg-red-900/50 border border-red-700 text-center p-4 rounded-lg">
+                        <p class="font-bold text-red-300 mb-2">App Launchers Disabled</p>
+                        <p class="text-sm text-red-200 mb-4">It looks like you're in a social media browser. For full functionality, please open this page in your phone's main browser (like Chrome or Safari).</p>
+                        <button id="copy-link-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Copy Page Link</button>
                     </div>
                     
                     <div>
-                        <p>Transfer the amount of Pi you want to exchange to this exact wallet address:</p>
+                        <p class="text-sm text-gray-400 mt-4">Transfer the amount of Pi you want to exchange to this exact wallet address:</p>
                         <div class="mt-2 flex items-center bg-gray-700 p-2 rounded-md">
                             <input id="pi-wallet-address" readonly class="bg-transparent font-mono text-base sm:text-lg w-full text-amber-400" value="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
                             <button id="copy-address-btn" class="ml-2 bg-gray-600 hover:bg-gray-500 text-white font-bold p-2 rounded-md">
@@ -310,8 +316,11 @@
         const piSentInput = document.getElementById('pi-sent');
         const expectedPaymentEl = document.getElementById('expected-payment-el');
         const transactionsList = document.getElementById('transactions-list');
-        const pcInstructions = document.getElementById('pc-instructions');
         const updatePriceBtn = document.getElementById('update-price-btn');
+        const appLaunchers = document.getElementById('app-launchers');
+        const webviewWarning = document.getElementById('webview-warning');
+        const copyLinkBtn = document.getElementById('copy-link-btn');
+
         
         // --- TOAST NOTIFICATION FUNCTION ---
         function showToast(message, type = 'success') {
@@ -324,6 +333,13 @@
             setTimeout(() => {
                 toast.remove();
             }, 3500); // Remove toast after 3.5 seconds
+        }
+
+        // --- BROWSER DETECTION ---
+        function detectInAppBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            // Checks for Facebook, Instagram, etc.
+            return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1);
         }
 
         // --- VIEW MANAGEMENT ---
@@ -461,7 +477,7 @@
                 status: 'Pending Verification',
                 createdAt: serverTimestamp(),
                 adminNote: '',
-                rateAtSubmission: currentGcashRate // Capture the rate
+                rateAtSubmission: currentGcashRate
             };
 
             try {
@@ -557,22 +573,23 @@
                 enterMainApp();
             });
             copyAddressBtn.addEventListener('click', () => handleCopy(document.getElementById('pi-wallet-address').value, 'Pi Wallet Address copied!'));
+            copyLinkBtn.addEventListener('click', () => handleCopy(window.location.href, 'Page Link copied!'));
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             
-            // Event listener for manual price update
             updatePriceBtn.addEventListener('click', fetchPrice);
 
-            // Event listener for price update on input (debounced)
             piSentInput.addEventListener('input', () => {
-                calculateExpectedPayment(); // Calculate immediately with current rate
+                calculateExpectedPayment(); 
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    fetchPrice(); // Fetch new price after user stops typing
-                }, 500); // 500ms delay
+                    fetchPrice(); 
+                }, 500);
             });
             
-            if (!/Mobi|Android/i.test(navigator.userAgent)) {
-                pcInstructions.classList.remove('hidden');
+            // Detect and handle WebView
+            if (detectInAppBrowser()) {
+                appLaunchers.classList.add('hidden');
+                webviewWarning.classList.remove('hidden');
             }
         }
         
