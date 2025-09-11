@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Thursday, September 11, 2025 at 8:01 AM PST
+    Timestamp: Thursday, September 11, 2025 at 9:11 AM PST
     File Name: admin.html
     Full File Path: admin.html
 
@@ -20,6 +20,7 @@
     - FIXED: Added a missing event listener for the `save-wallet-btn` to resolve the "saveWalletAddress is not defined" error.
     - **CRITICAL FIX**: Placed the `init()` function call inside a `DOMContentLoaded` listener to ensure all functions are defined before the script tries to attach event listeners, resolving the `ReferenceError`.
     - **CRITICAL FIX**: Moved the event listeners for `saveWalletBtn` and `toggleStatusBtn` into the `showDashboard` function. This ensures the functions are defined and ready to be used before the buttons are attached to them, completely resolving the `ReferenceError` and logic flow.
+	-This is a comprehensive update that introduces modals for management, collapsible UI sections, and robust back-end integration with Firestore for the new features.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -33,14 +34,74 @@
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
         .action-button { transition: all 0.2s ease-in-out; }
         .action-button:hover { transform: scale(1.05); }
-        .filter-button.active {
-            background-color: #3B82F6;
-            color: white;
-        }
+        .filter-button.active { background-color: #3B82F6; color: white; }
+
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); opacity: 0; transform: translateX(100%); transition: all 0.4s ease-in-out; }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast.success { background-color: #22c55e; }
+        .toast.error   { background-color: #ef4444; }
+
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
+        
+        #collapsible-panels { transition: all 0.3s ease-out; max-height: 1000px; overflow: hidden; }
+        #collapsible-panels.hidden { max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; opacity: 0; transform: scaleY(0); }
     </style>
 </head>
 <body class="bg-gray-800 text-gray-200">
 
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] space-y-2"></div>
+
+    <div id="wallet-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div id="wallet-modal-overlay" class="modal-overlay absolute inset-0 bg-black bg-opacity-60"></div>
+        <div class="modal-content bg-gray-700 rounded-lg shadow-xl w-full max-w-md p-6 mx-4 transform -translate-y-10">
+            <h3 id="wallet-modal-title" class="text-xl font-bold mb-4">Add New Wallet</h3>
+            <form id="wallet-form">
+                <input type="hidden" id="wallet-id-input">
+                <div class="mb-4">
+                    <label for="wallet-name-input" class="block text-sm font-medium text-gray-300 mb-1">Wallet Name</label>
+                    <input type="text" id="wallet-name-input" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="e.g., Main Payout Wallet" required>
+                </div>
+                <div>
+                    <label for="wallet-address-input-modal" class="block text-sm font-medium text-gray-300 mb-1">Wallet Address (Public Key)</label>
+                    <input type="text" id="wallet-address-input-modal" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="G..." required>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-wallet-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">Cancel</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">Save Wallet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="replies-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div id="replies-modal-overlay" class="modal-overlay absolute inset-0 bg-black bg-opacity-60"></div>
+        <div class="modal-content bg-gray-700 rounded-lg shadow-xl w-full max-w-2xl p-6 mx-4 transform -translate-y-10">
+            <h3 class="text-xl font-bold mb-4">Manage Canned Replies</h3>
+            <div class="max-h-[60vh] overflow-y-auto pr-2">
+                <div id="replies-list-modal" class="space-y-3 mb-4"></div>
+                <form id="reply-form" class="bg-gray-800 p-3 rounded-md sticky bottom-0">
+                    <h4 id="reply-form-title" class="text-lg font-semibold mb-2">Add New Reply</h4>
+                    <input type="hidden" id="reply-id-input">
+                    <div class="mb-2">
+                        <label for="reply-title-input" class="block text-sm font-medium text-gray-300 mb-1">Reply Title</label>
+                        <input type="text" id="reply-title-input" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="e.g., GCash Sent" required>
+                    </div>
+                    <div>
+                        <label for="reply-message-input" class="block text-sm font-medium text-gray-300 mb-1">Message</label>
+                        <textarea id="reply-message-input" rows="3" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="e.g., Your GCash has been sent." required></textarea>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm">Save Reply</button>
+                    </div>
+                </form>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="close-replies-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">Close</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="login-view" class="min-h-screen flex items-center justify-center">
         <div class="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-w-sm">
             <div class="text-center mb-6">
@@ -61,33 +122,48 @@
                 <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
                 <p id="admin-email" class="text-xs text-gray-400"></p>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 md:space-x-4">
                  <div id="status-indicator" class="flex items-center space-x-2">
                     <span id="status-dot" class="w-3 h-3 rounded-full bg-gray-500"></span>
                     <span id="status-text" class="text-sm font-semibold text-gray-400">Loading...</span>
                  </div>
                  <button id="toggle-status-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md text-sm transition">Toggle Status</button>
+                <button id="toggle-panels-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md text-sm transition">Panels</button>
+                <button id="manage-replies-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md text-sm">Replies</button>
                 <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
             </div>
         </header>
 
         <main class="p-4 md:p-6 space-y-6">
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <p class="text-center font-semibold mb-3 text-white">Quick App Launchers</p>
-                <div class="grid grid-cols-3 gap-2">
-                    <a href="intent://#Intent;package=com.blockchainvault;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
-                    <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
-                    <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+            <div id="collapsible-panels" class="space-y-6">
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <p class="text-center font-semibold mb-3 text-white">Quick App Launchers</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <a href="intent://#Intent;package=com.blockchainvault;end" class="bg-orange-600 text-white p-3 rounded-lg text-center hover:bg-orange-700 transition">Pi Network</a>
+                        <a href="intent://#Intent;package=pi.browser;end" class="bg-amber-500 text-black p-3 rounded-lg text-center hover:bg-amber-600 transition">Pi Browser</a>
+                        <a href="intent://#Intent;package=com.globe.gcash.android;end" class="bg-blue-600 text-white p-3 rounded-lg text-center hover:bg-blue-600 transition">GCash</a>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <h3 class="font-semibold text-white mb-3">Manage Pi Wallet Address</h3>
-                <label for="pi-wallet-address-input" class="block text-sm font-medium text-gray-400 mb-1">Current Public Wallet Address:</label>
-                <input type="text" id="pi-wallet-address-input" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm" placeholder="GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB">
-                <button id="save-wallet-btn" class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition flex justify-center items-center">
-                    Save New Address
-                </button>
+                
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="font-semibold text-white mb-3">Manage Pi Wallet Address</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <label for="wallet-select" class="block text-sm font-medium text-gray-400 mb-1">Select Saved Wallet:</label>
+                            <select id="wallet-select" class="w-full bg-gray-600 text-white rounded-md p-2 text-sm"><option>Loading...</option></select>
+                        </div>
+                        <div>
+                            <label for="active-wallet-address" class="block text-sm font-medium text-gray-400 mb-1">Current Active Payout Address:</label>
+                            <input type="text" id="active-wallet-address" class="w-full bg-gray-900 text-gray-400 rounded-md p-2 text-sm font-mono" placeholder="Set an active wallet..." readonly>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 text-sm">
+                        <button id="set-active-wallet-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Set as Active</button>
+                        <button id="add-wallet-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Add New</button>
+                        <button id="edit-wallet-btn" class="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-2 px-4 rounded-md">Edit</button>
+                        <button id="delete-wallet-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Delete</button>
+                    </div>
+                </div>
             </div>
             
             <div class="bg-gray-700 p-3 rounded-lg flex flex-wrap justify-around text-center gap-2 text-sm font-semibold">
@@ -103,14 +179,12 @@
         </main>
     </div>
 
-
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDoc, setDoc, serverTimestamp, addDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         
-        // --- USE THE SAME FIREBASE CONFIG AS YOUR MAIN APP ---
         const firebaseConfig = {
             apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
             authDomain: "pi-gcash-p2p-app.firebaseapp.com",
@@ -120,11 +194,7 @@
             appId: "1:148063854165:web:cd335ca3af278034e4fedc",
             measurementId: "G-VVG58MWN3F"
         };
-        
-        // --- ADMIN AUTHORIZATION ---
         const ADMIN_EMAILS = ["randybondoc@gmail.com", "randysbondoc@gmail.com"];
-
-        // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -136,38 +206,130 @@
         const loginError = document.getElementById('login-error');
         const logoutBtn = document.getElementById('logout-btn');
         const transactionsList = document.getElementById('transactions-list');
-        const adminEmailEl = document.getElementById('admin-email');
         const filterButtons = document.querySelectorAll('.filter-button');
-        const piWalletAddressInput = document.getElementById('pi-wallet-address-input');
-        const saveWalletBtn = document.getElementById('save-wallet-btn');
+        const adminEmailEl = document.getElementById('admin-email');
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
         const toggleStatusBtn = document.getElementById('toggle-status-btn');
+        const togglePanelsBtn = document.getElementById('toggle-panels-btn');
+        const collapsiblePanels = document.getElementById('collapsible-panels');
+        const walletSelect = document.getElementById('wallet-select');
+        const activeWalletAddress = document.getElementById('active-wallet-address');
+        const setActiveWalletBtn = document.getElementById('set-active-wallet-btn');
+        const addWalletBtn = document.getElementById('add-wallet-btn');
+        const editWalletBtn = document.getElementById('edit-wallet-btn');
+        const deleteWalletBtn = document.getElementById('delete-wallet-btn');
+        const walletModal = document.getElementById('wallet-modal');
+        const walletForm = document.getElementById('wallet-form');
+        const walletModalTitle = document.getElementById('wallet-modal-title');
+        const walletIdInput = document.getElementById('wallet-id-input');
+        const walletNameInput = document.getElementById('wallet-name-input');
+        const walletAddressInputModal = document.getElementById('wallet-address-input-modal');
+        const cancelWalletBtn = document.getElementById('cancel-wallet-btn');
+        const walletModalOverlay = document.getElementById('wallet-modal-overlay');
+        const manageRepliesBtn = document.getElementById('manage-replies-btn');
+        const repliesModal = document.getElementById('replies-modal');
+        const closeRepliesBtn = document.getElementById('close-replies-btn');
+        const replyForm = document.getElementById('reply-form');
+        const replyFormTitle = document.getElementById('reply-form-title');
+        const replyIdInput = document.getElementById('reply-id-input');
+        const replyTitleInput = document.getElementById('reply-title-input');
+        const replyMessageInput = document.getElementById('reply-message-input');
+        const repliesListModal = document.getElementById('replies-list-modal');
+        const repliesModalOverlay = document.getElementById('replies-modal-overlay');
         
+        // Global state
         let transactionsUnsubscribe = null;
-        let currentFilter = 'Pending Verification';
         let adminStatusListener = null;
+        let activeWalletListener = null;
+        let currentFilter = 'Pending Verification';
+        let namedWallets = [];
+        let cannedReplies = [];
+        let dashboardInitialized = false;
 
-        // --- FUNCTIONS ---
-        function showDashboard(user) {
+        // --- CORE FUNCTIONS ---
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => { toast.classList.add('show'); }, 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        async function showDashboard(user) {
             adminEmailEl.textContent = user.email;
             loginView.classList.add('hidden');
             dashboardView.classList.remove('hidden');
-            fetchWalletAddress();
+
+            await fetchNamedWallets();
+            await fetchCannedReplies();
+            
+            listenForActiveWallet();
             listenForTransactions();
             listenForAdminStatus();
+
+            if (!dashboardInitialized) {
+                logoutBtn.addEventListener('click', handleLogout);
+                filterButtons.forEach(button => button.addEventListener('click', updateFilter));
+                toggleStatusBtn.addEventListener('click', toggleAdminStatus);
+                togglePanelsBtn.addEventListener('click', togglePanels);
+                setActiveWalletBtn.addEventListener('click', setActiveWallet);
+                addWalletBtn.addEventListener('click', () => openWalletModal());
+                editWalletBtn.addEventListener('click', () => {
+                    const selectedId = walletSelect.value;
+                    if (!selectedId || namedWallets.length === 0) return showToast("Select a wallet to edit.", "error");
+                    const wallet = namedWallets.find(w => w.id === selectedId);
+                    openWalletModal(wallet);
+                });
+                deleteWalletBtn.addEventListener('click', deleteWallet);
+                walletForm.addEventListener('submit', saveWallet);
+                cancelWalletBtn.addEventListener('click', closeWalletModal);
+                walletModalOverlay.addEventListener('click', closeWalletModal);
+                manageRepliesBtn.addEventListener('click', openRepliesModal);
+                replyForm.addEventListener('submit', saveReply);
+                closeRepliesBtn.addEventListener('click', closeRepliesModal);
+                repliesModalOverlay.addEventListener('click', closeRepliesModal);
+                repliesListModal.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('delete-reply-btn')) {
+                        deleteReply(e.target.dataset.id);
+                    }
+                    if (e.target.classList.contains('edit-reply-btn')) {
+                        const reply = cannedReplies.find(r => r.id === e.target.dataset.id);
+                        if(reply) {
+                            replyIdInput.value = reply.id;
+                            replyTitleInput.value = reply.title;
+                            replyMessageInput.value = reply.message;
+                            replyFormTitle.textContent = "Edit Reply";
+                            replyTitleInput.focus();
+                        }
+                    }
+                });
+                transactionsList.addEventListener('click', handleTransactionUpdate);
+                transactionsList.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('canned-reply-select')) {
+                        const targetInput = document.getElementById(e.target.dataset.targetInput);
+                        if (targetInput && e.target.value) {
+                            targetInput.value = e.target.value;
+                        }
+                    }
+                });
+                dashboardInitialized = true;
+            }
         }
 
         function showLogin(errorMsg = '') {
             dashboardView.classList.add('hidden');
             loginView.classList.remove('hidden');
             loginError.textContent = errorMsg;
-            if (transactionsUnsubscribe) {
-                transactionsUnsubscribe(); 
-            }
-             if (adminStatusListener) {
-                adminStatusListener();
-            }
+            if (transactionsUnsubscribe) transactionsUnsubscribe();
+            if (adminStatusListener) adminStatusListener();
+            if (activeWalletListener) activeWalletListener();
         }
 
         async function handleLogin() {
@@ -180,31 +342,21 @@
             }
         }
         
-        function handleLogout() {
-            signOut(auth);
-        }
+        function handleLogout() { signOut(auth); }
 
         function listenForTransactions() {
             if (transactionsUnsubscribe) transactionsUnsubscribe();
-
-            const q = query(
-                collection(db, "transactions"), 
-                where("status", "==", currentFilter), 
-                orderBy("createdAt", "desc")
-            );
-
+            const q = query(collection(db, "transactions"), where("status", "==", currentFilter), orderBy("createdAt", "desc"));
             transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
                 transactionsList.innerHTML = ''; 
                 if (querySnapshot.empty) {
-                    transactionsList.innerHTML = `<p class="text-center text-gray-400 py-10">No transactions found with status: ${currentFilter}</p>`;
+                    transactionsList.innerHTML = `<p class="text-center text-gray-400 py-10">No transactions with status: ${currentFilter}</p>`;
                 } else {
-                    querySnapshot.forEach(doc => {
-                        renderTransaction(doc.id, doc.data());
-                    });
+                    querySnapshot.forEach(doc => renderTransaction(doc.id, doc.data()));
                 }
             }, (error) => {
                 console.error("Error fetching transactions: ", error);
-                transactionsList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading transactions. Check console for permissions error.</p>`;
+                transactionsList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading transactions.</p>`;
             });
         }
         
@@ -218,78 +370,30 @@
         function renderTransaction(id, tx) {
             const txElement = document.createElement('div');
             txElement.className = 'bg-gray-700 p-4 rounded-lg shadow-md';
-            txElement.dataset.transactionId = id; 
-            
+            txElement.setAttribute('data-transaction-id', id);
             const createdAt = tx.createdAt ? tx.createdAt.toDate().toLocaleString() : 'N/A';
             const rateInfo = tx.rateAtSubmission ? `₱${tx.rateAtSubmission}/π` : 'N/A';
-            
             let paymentDueHTML = '<p class="text-2xl font-bold text-gray-500">N/A</p>';
             if (tx.rateAtSubmission && tx.piSent) {
                 const paymentAmount = (tx.piSent * tx.rateAtSubmission) - 20.00;
                 paymentDueHTML = `<p class="text-3xl font-bold text-green-400">₱${paymentAmount.toFixed(2)}</p>`;
             }
-            
-            let actionButtonsHTML = '';
-            let statusColor = 'text-yellow-400';
-            
+            let actionButtonsHTML = '', statusColor = 'text-yellow-400';
             switch(tx.status) {
                 case 'Pending Verification':
-                    actionButtonsHTML = `
-                        <button data-id="${id}" data-status="In Progress" class="action-button update-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-5 rounded-md text-sm">Start Processing</button>
-                        <button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
-                    `;
-                    statusColor = 'text-yellow-400';
-                    break;
+                    actionButtonsHTML = `<button data-id="${id}" data-status="In Progress" class="action-button update-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-5 rounded-md text-sm">Start Processing</button><button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>`;
+                    statusColor = 'text-yellow-400'; break;
                 case 'In Progress':
-                    actionButtonsHTML = `
-                        <button data-id="${id}" data-status="Paid" class="action-button update-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md text-sm">Mark as Paid</button>
-                        <button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>
-                    `;
-                    statusColor = 'text-blue-400';
-                    break;
+                    actionButtonsHTML = `<button data-id="${id}" data-status="Paid" class="action-button update-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md text-sm">Mark as Paid</button><button data-id="${id}" data-status="Rejected" class="action-button update-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md text-sm">Reject</button>`;
+                    statusColor = 'text-blue-400'; break;
                 case 'Paid':
                     actionButtonsHTML = `<span class="text-sm font-semibold text-green-400">Transaction Complete</span>`;
-                    statusColor = 'text-green-400';
-                    break;
+                    statusColor = 'text-green-400'; break;
                 case 'Rejected':
                     actionButtonsHTML = `<span class="text-sm font-semibold text-red-400">Transaction Rejected</span>`;
-                    statusColor = 'text-red-400';
-                    break;
+                    statusColor = 'text-red-400'; break;
             }
-
-            txElement.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-sm font-semibold py-1 px-3 rounded-full bg-gray-600 ${statusColor.replace('text-', 'bg-')}-700/50">${tx.status}</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p class="font-bold text-cyan-400">Transaction Details</p>
-                        <p><span class="font-semibold text-gray-400">Submitted At:</span> ${createdAt}</p>
-                        <p><span class="font-semibold text-gray-400">User Email:</span> ${tx.userEmail}</p>
-                        <p><span class="font-semibold text-gray-400">User ID:</span> <code class="text-xs">${tx.userId}</code></p>
-                        <p><span class="font-semibold text-gray-400">Reference ID:</span> <code class="text-xs">${tx.transactionId}</code></p>
-                    </div>
-                    <div>
-                        <p class="font-bold text-amber-400">Payment Details</p>
-                        <p><span class="font-semibold text-gray-400">Pi Sent:</span> <strong class="text-white">${tx.piSent}π</strong></p>
-                        <p><span class="font-semibold text-gray-400">Rate at Submission:</span> <strong class="text-lime-400">${rateInfo}</strong></p>
-                        <p><span class="font-semibold text-gray-400">From Wallet:</span> <code class="text-xs">${tx.piWalletSource}</code></p>
-                        <p><span class="font-semibold text-gray-400">GCash Name:</span> ${tx.gcashName}</p>
-                        <p><span class="font-semibold text-gray-400">GCash Number:</span> ${tx.gcashNumber}</p>
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-600 text-center bg-gray-800 rounded-b-md">
-                    <p class="text-sm font-semibold text-gray-400">GCash Payment Due (Rate * Pi) - ₱20 Fee</p>
-                    ${paymentDueHTML}
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-600">
-                    <label for="admin-note-${id}" class="block text-sm font-medium text-gray-400 mb-1">Admin Note (visible to user)</label>
-                    <input type="text" id="admin-note-${id}" class="admin-note-input w-full bg-gray-600 text-white rounded-md p-2 text-sm" value="${tx.adminNote || ''}" placeholder="e.g., GCash sent, waiting for confirmation...">
-                    <div class="mt-3 flex justify-end items-center gap-3">
-                        ${actionButtonsHTML}
-                    </div>
-                </div>
-            `;
+            txElement.innerHTML = `<div class="flex justify-between items-center mb-4"><span class="text-sm font-semibold py-1 px-3 rounded-full bg-gray-600 ${statusColor.replace('text-', 'bg-')}-700/50">${tx.status}</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"><div><p class="font-bold text-cyan-400">Transaction Details</p><p><span class="font-semibold text-gray-400">Submitted At:</span> ${createdAt}</p><p><span class="font-semibold text-gray-400">User Email:</span> ${tx.userEmail}</p><p><span class="font-semibold text-gray-400">User ID:</span> <code class="text-xs">${tx.userId}</code></p><p><span class="font-semibold text-gray-400">Reference ID:</span> <code class="text-xs">${tx.transactionId}</code></p></div><div><p class="font-bold text-amber-400">Payment Details</p><p><span class="font-semibold text-gray-400">Pi Sent:</span> <strong class="text-white">${tx.piSent}π</strong></p><p><span class="font-semibold text-gray-400">Rate at Submission:</span> <strong class="text-lime-400">${rateInfo}</strong></p><p><span class="font-semibold text-gray-400">From Wallet:</span> <code class="text-xs">${tx.piWalletSource}</code></p><p><span class="font-semibold text-gray-400">GCash Name:</span> ${tx.gcashName}</p><p><span class="font-semibold text-gray-400">GCash Number:</span> ${tx.gcashNumber}</p></div></div><div class="mt-4 pt-4 border-t border-gray-600 text-center bg-gray-800 rounded-b-md"><p class="text-sm font-semibold text-gray-400">GCash Payment Due (Rate * Pi) - ₱20 Fee</p>${paymentDueHTML}</div><div class="mt-4 pt-4 border-t border-gray-600"><div class="flex justify-between items-end gap-2"><div class="flex-grow"><label for="admin-note-${id}" class="block text-sm font-medium text-gray-400 mb-1">Admin Note (visible to user)</label><input type="text" id="admin-note-${id}" class="admin-note-input w-full bg-gray-600 text-white rounded-md p-2 text-sm" value="${tx.adminNote || ''}" placeholder="Type a note or select a reply..."></div><div><select class="canned-reply-select bg-gray-600 text-white rounded-md p-2.5 text-sm" data-target-input="admin-note-${id}"><option value="">Select a reply...</option>${cannedReplies.map(reply => `<option value="${reply.message}">${reply.title}</option>`).join('')}</select></div></div><div class="mt-3 flex justify-end items-center gap-3">${actionButtonsHTML}</div></div>`;
             transactionsList.appendChild(txElement);
         }
 
@@ -297,166 +401,261 @@
             const button = e.target.closest('.update-btn');
             if (!button) return;
 
-            const transactionId = button.dataset.id;
-            const newStatus = button.dataset.status;
-            const parentElement = document.querySelector(`[data-transaction-id="${transactionId}"]`);
-            const noteInput = parentElement.querySelector('.admin-note-input');
-            const adminNoteText = noteInput.value.trim();
+            const parentCard = button.closest('[data-transaction-id]');
+            if (!parentCard) return;
 
             button.disabled = true;
             button.textContent = 'Updating...';
 
+            const transactionId = button.dataset.id;
+            const newStatus = button.dataset.status;
+            
+            const noteInput = parentCard.querySelector('.admin-note-input');
+            const adminNoteText = noteInput.value.trim();
+
             const docRef = doc(db, "transactions", transactionId);
             try {
-                await updateDoc(docRef, { 
-                    status: newStatus,
-                    adminNote: adminNoteText
-                });
+                await updateDoc(docRef, { status: newStatus, adminNote: adminNoteText });
+                showToast(`Transaction status updated to ${newStatus}.`);
             } catch (error) {
                 console.error("Failed to update transaction:", error);
-                alert("Error: Could not update transaction status. Check console for details.");
+                showToast("Error updating transaction.", "error");
                 button.disabled = false;
-                button.textContent = `Update to ${newStatus}`;
+                button.textContent = button.dataset.status === 'In Progress' ? 'Start Processing' : 'Mark as Paid'; // Basic reset
             }
         }
-        
-        async function fetchWalletAddress() {
-            const walletDocRef = doc(db, "marketData", "piWallet");
-            try {
-                const docSnap = await getDoc(walletDocRef);
-                if (docSnap.exists() && docSnap.data().address) {
-                    piWalletAddressInput.value = docSnap.data().address;
-                } else {
-                    // Create the document if it doesn't exist
-                    const defaultAddress = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
-                    await setDoc(walletDocRef, { address: defaultAddress });
-                    piWalletAddressInput.value = defaultAddress;
-                }
-            } catch (error) {
-                console.error("Error fetching wallet address:", error);
-                piWalletAddressInput.placeholder = "Error loading address.";
-            }
-        }
-        
-        async function saveWalletAddress() {
-            const newAddress = piWalletAddressInput.value.trim();
-            if (!newAddress) {
-                alert("Wallet address cannot be empty.");
-                return;
-            }
 
-            saveWalletBtn.disabled = true;
-            saveWalletBtn.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-            `;
-
-            const walletDocRef = doc(db, "marketData", "piWallet");
+        function listenForActiveWallet() {
             try {
-                await setDoc(walletDocRef, { address: newAddress });
-                saveWalletBtn.innerHTML = 'Saved!';
-                setTimeout(() => {
-                    saveWalletBtn.disabled = false;
-                    saveWalletBtn.textContent = 'Save New Address';
-                }, 2000);
+                const walletDocRef = doc(db, "marketData", "piWallet");
+                activeWalletListener = onSnapshot(walletDocRef, (docSnap) => {
+                    if (docSnap.exists() && docSnap.data().address) {
+                        activeWalletAddress.value = docSnap.data().address;
+                    } else {
+                        activeWalletAddress.value = '';
+                        activeWalletAddress.placeholder = "No active wallet set.";
+                    }
+                });
             } catch (error) {
-                console.error("Error saving wallet address:", error);
-                saveWalletBtn.innerHTML = 'Save Failed';
-                 alert("Failed to save address. Check console for details.");
-                setTimeout(() => {
-                    saveWalletBtn.disabled = false;
-                    saveWalletBtn.textContent = 'Save New Address';
-                }, 3000);
+                console.error("Error listening for active wallet:", error);
+                activeWalletAddress.placeholder = "Error loading active wallet.";
+                showToast("Could not listen for active wallet.", "error");
             }
         }
         
-         async function listenForAdminStatus() {
+        async function listenForAdminStatus() {
             const statusDocRef = doc(db, "marketData", "adminStatus");
             adminStatusListener = onSnapshot(statusDocRef, (docSnap) => {
-                let status = 'offline'; // Default to offline
-                if (docSnap.exists() && docSnap.data().status) {
-                    status = docSnap.data().status;
-                }
-                
-                // Base classes that are always present
+                let status = 'offline';
+                if (docSnap.exists() && docSnap.data().status) { status = docSnap.data().status; }
                 const baseClasses = 'text-sm font-semibold';
-
                 if (status === 'online') {
-                    // --- SETS INDICATOR TO GREEN ---
-                    statusDot.classList.remove('bg-red-500', 'bg-gray-500');
-                    statusDot.classList.add('bg-green-500', 'animate-pulse');
+                    statusDot.className = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
                     statusText.textContent = 'Admin is Online';
-                    // Force the correct classes, removing any old ones
                     statusText.className = `${baseClasses} text-green-400`;
                 } else { 
-                    // --- SETS INDICATOR TO RED ---
-                    statusDot.classList.remove('bg-green-500', 'animate-pulse', 'bg-gray-500');
-                    statusDot.classList.add('bg-red-500');
+                    statusDot.className = 'w-3 h-3 rounded-full bg-red-500';
                     statusText.textContent = 'Admin is Offline';
-                    // Force the correct classes, removing any old ones
                     statusText.className = `${baseClasses} text-red-400`;
                 }
             }, (error) => {
                 console.error("Error listening to admin status:", error);
-                statusDot.classList.remove('bg-green-500', 'bg-red-500');
-                statusDot.classList.add('bg-gray-500');
                 statusText.textContent = 'Status Error';
-                statusText.className = 'text-sm font-semibold text-gray-400';
             });
         }
         
         async function toggleAdminStatus() {
-            const statusDocRef = doc(db, "marketData", "adminStatus");
             toggleStatusBtn.disabled = true;
-            toggleStatusBtn.textContent = 'Updating...';
-            
+            toggleStatusBtn.textContent = '...';
+            const statusDocRef = doc(db, "marketData", "adminStatus");
             try {
                 const docSnap = await getDoc(statusDocRef);
                 const currentStatus = (docSnap.exists() && docSnap.data().status) ? docSnap.data().status : 'offline';
                 const newStatus = currentStatus === 'online' ? 'offline' : 'online';
                 await setDoc(statusDocRef, { status: newStatus, lastUpdated: serverTimestamp() });
+                showToast(`Status set to ${newStatus}.`);
             } catch (error) {
                 console.error("Error toggling admin status:", error);
-                alert("Failed to toggle status.");
+                showToast("Failed to toggle status.", "error");
             } finally {
-                 toggleStatusBtn.textContent = 'Toggle Status';
-                 toggleStatusBtn.disabled = false;
+                toggleStatusBtn.textContent = 'Toggle Status';
+                toggleStatusBtn.disabled = false;
+            }
+        }
+        
+        function togglePanels() { collapsiblePanels.classList.toggle('hidden'); }
+
+        async function fetchNamedWallets() {
+            try {
+                const q = query(collection(db, "namedWallets"), orderBy("name"));
+                const querySnapshot = await getDocs(q);
+                namedWallets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderWalletsDropdown();
+            } catch (error) {
+                console.error("Error fetching named wallets:", error);
+                showToast("Could not load wallets. See console.", "error");
+                walletSelect.innerHTML = `<option disabled>Error loading wallets.</option>`;
             }
         }
 
+        function renderWalletsDropdown() {
+            if (namedWallets.length === 0) {
+                walletSelect.innerHTML = `<option disabled>No wallets saved yet.</option>`;
+            } else {
+                walletSelect.innerHTML = namedWallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+            }
+        }
 
-        // --- MAIN INITIALIZATION ---
+        function openWalletModal(wallet = null) {
+            walletForm.reset();
+            if (wallet) {
+                walletModalTitle.textContent = "Edit Wallet";
+                walletIdInput.value = wallet.id;
+                walletNameInput.value = wallet.name;
+                walletAddressInputModal.value = wallet.address;
+            } else {
+                walletModalTitle.textContent = "Add New Wallet";
+                walletIdInput.value = '';
+            }
+            walletModal.classList.remove('hidden');
+        }
+        
+        function closeWalletModal() { walletModal.classList.add('hidden'); }
+
+        async function saveWallet(e) {
+            e.preventDefault();
+            const id = walletIdInput.value;
+            const walletData = { name: walletNameInput.value, address: walletAddressInputModal.value };
+            try {
+                if (id) {
+                    await setDoc(doc(db, "namedWallets", id), walletData);
+                    showToast("Wallet updated successfully!");
+                } else {
+                    await addDoc(collection(db, "namedWallets"), walletData);
+                    showToast("New wallet added successfully!");
+                }
+                closeWalletModal();
+                await fetchNamedWallets();
+            } catch (error) {
+                showToast("Error saving wallet.", "error");
+                console.error("Error saving wallet: ", error);
+            }
+        }
+
+        async function deleteWallet() {
+            const selectedId = walletSelect.value;
+            if (!selectedId || namedWallets.length === 0) return showToast("Please select a wallet to delete.", "error");
+            if (confirm("Are you sure you want to delete this wallet? This cannot be undone.")) {
+                try {
+                    await deleteDoc(doc(db, "namedWallets", selectedId));
+                    showToast("Wallet deleted successfully.");
+                    await fetchNamedWallets();
+                } catch(error) {
+                    showToast("Error deleting wallet.", "error");
+                    console.error("Error deleting wallet: ", error);
+                }
+            }
+        }
+
+        async function setActiveWallet() {
+            const selectedId = walletSelect.value;
+            if (!selectedId || namedWallets.length === 0) return showToast("Please select a wallet to set as active.", "error");
+            const selectedWallet = namedWallets.find(w => w.id === selectedId);
+            try {
+                await setDoc(doc(db, "marketData", "piWallet"), { address: selectedWallet.address });
+                showToast(`"${selectedWallet.name}" is now the active payout wallet.`);
+            } catch(error) {
+                showToast("Error setting active wallet.", "error");
+                console.error("Error setting active wallet: ", error);
+            }
+        }
+
+        async function fetchCannedReplies() {
+            try {
+                const q = query(collection(db, "cannedReplies"), orderBy("title"));
+                const querySnapshot = await getDocs(q);
+                cannedReplies = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRepliesInModal();
+            } catch (error) {
+                console.error("Error fetching canned replies:", error);
+                showToast("Could not load replies. See console.", "error");
+            }
+        }
+        
+        function updateAllReplyDropdowns() {
+            const allDropdowns = document.querySelectorAll('.canned-reply-select');
+            const optionsHTML = cannedReplies.map(reply => `<option value="${reply.message}">${reply.title}</option>`).join('');
+            
+            allDropdowns.forEach(dropdown => {
+                const firstOption = dropdown.options[0];
+                dropdown.innerHTML = '';
+                dropdown.appendChild(firstOption);
+                dropdown.insertAdjacentHTML('beforeend', optionsHTML);
+            });
+        }
+
+        function openRepliesModal() { repliesModal.classList.remove('hidden'); }
+        function closeRepliesModal() { repliesModal.classList.add('hidden'); }
+        
+        function renderRepliesInModal() {
+            repliesListModal.innerHTML = cannedReplies.map(reply => `
+                <div class="bg-gray-800 p-2 rounded-md flex justify-between items-center">
+                    <div><p class="font-bold">${reply.title}</p><p class="text-xs text-gray-400">${reply.message}</p></div>
+                    <div class="space-x-2"><button class="edit-reply-btn text-yellow-400 hover:text-yellow-300" data-id="${reply.id}">Edit</button><button class="delete-reply-btn text-red-500 hover:text-red-400" data-id="${reply.id}">Delete</button></div>
+                </div>`).join('');
+        }
+        
+        async function saveReply(e) {
+            e.preventDefault();
+            const id = replyIdInput.value;
+            const replyData = { title: replyTitleInput.value, message: replyMessageInput.value };
+            try {
+                if (id) {
+                    await setDoc(doc(db, "cannedReplies", id), replyData);
+                    showToast("Reply updated successfully!");
+                } else {
+                    await addDoc(collection(db, "cannedReplies"), replyData);
+                    showToast("New reply added successfully!");
+                }
+                replyForm.reset();
+                replyIdInput.value = '';
+                replyFormTitle.textContent = 'Add New Reply';
+                await fetchCannedReplies();
+                updateAllReplyDropdowns();
+            } catch(error) {
+                showToast("Error saving reply.", "error");
+                console.error("Error saving reply: ", error);
+            }
+        }
+
+        async function deleteReply(replyId) {
+            if (confirm("Are you sure you want to delete this canned reply?")) {
+                try {
+                    await deleteDoc(doc(db, "cannedReplies", replyId));
+                    showToast("Reply deleted.");
+                    await fetchCannedReplies();
+                    updateAllReplyDropdowns();
+                } catch(error) {
+                    showToast("Error deleting reply.", "error");
+                    console.error("Error deleting reply: ", error);
+                }
+            }
+        }
+
+        // --- INITIALIZATION ---
         function init() {
             onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    if (ADMIN_EMAILS.includes(user.email)) {
-                        console.log("Admin authenticated:", user.email);
-                        showDashboard(user);
-                    } else {
-                        console.warn("Unauthorized access attempt by:", user.email);
-                        handleLogout();
-                        showLogin("Access Denied. This account is not authorized.");
-                    }
+                if (user && ADMIN_EMAILS.includes(user.email)) {
+                    showDashboard(user);
                 } else {
-                    showLogin();
+                    if (user) handleLogout();
+                    showLogin(user ? "Access Denied. This account is not authorized." : "");
                 }
             });
-            
             loginBtn.addEventListener('click', handleLogin);
-            logoutBtn.addEventListener('click', handleLogout);
-            transactionsList.addEventListener('click', handleTransactionUpdate);
-            filterButtons.forEach(button => {
-                button.addEventListener('click', updateFilter);
-            });
-            saveWalletBtn.addEventListener('click', saveWalletAddress);
-            toggleStatusBtn.addEventListener('click', toggleAdminStatus);
         }
 
         document.addEventListener('DOMContentLoaded', init);
     </script>
-
 </body>
 </html>
