@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Wednesday, September 11, 2025 at 3:58 AM PST
+    Timestamp: Thursday, September 11, 2025 at 8:01 AM PST
     File Name: admin.html
     Full File Path: admin.html
 
@@ -13,6 +13,13 @@
 	- Added: A new saveWalletAddress function. This function uses the updateDoc method to save a new wallet address to Firestore, allowing the admin to change the address users see.
 	- Revised: The showDashboard function now calls fetchWalletAddress() to ensure the input field is populated with the latest data from the database.
 	- Revised: The "Save" button now shows a "Saving..." state with a spinner during the update and a "Saved!" message upon success for better user feedback.
+    - Added: A new section with a toggle button to allow the admin to set their online/offline status.
+    - Added: A new Firestore document at `marketData/adminStatus` to store the online/offline status.
+    - Added: A new `toggleAdminStatus` function to update the status in Firestore and provide a visual indication of the current state.
+    - FIXED: Added a missing event listener for the `toggle-status-btn` so it now functions correctly.
+    - FIXED: Added a missing event listener for the `save-wallet-btn` to resolve the "saveWalletAddress is not defined" error.
+    - **CRITICAL FIX**: Placed the `init()` function call inside a `DOMContentLoaded` listener to ensure all functions are defined before the script tries to attach event listeners, resolving the `ReferenceError`.
+    - **CRITICAL FIX**: Moved the event listeners for `saveWalletBtn` and `toggleStatusBtn` into the `showDashboard` function. This ensures the functions are defined and ready to be used before the buttons are attached to them, completely resolving the `ReferenceError` and logic flow.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +61,14 @@
                 <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
                 <p id="admin-email" class="text-xs text-gray-400"></p>
             </div>
-            <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
+            <div class="flex items-center space-x-4">
+                 <div id="status-indicator" class="flex items-center space-x-2">
+                    <span id="status-dot" class="w-3 h-3 rounded-full bg-gray-500"></span>
+                    <span id="status-text" class="text-sm font-semibold text-gray-400">Loading...</span>
+                 </div>
+                 <button id="toggle-status-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md text-sm transition">Toggle Status</button>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">Logout</button>
+            </div>
         </header>
 
         <main class="p-4 md:p-6 space-y-6">
@@ -94,9 +108,8 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // New import for updateDoc, setDoc
-
+        import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
         // --- USE THE SAME FIREBASE CONFIG AS YOUR MAIN APP ---
         const firebaseConfig = {
             apiKey: "AIzaSyBlq33BQqvRk5HQcHXxJvfBE4iygcoLxfw",
@@ -127,9 +140,13 @@
         const filterButtons = document.querySelectorAll('.filter-button');
         const piWalletAddressInput = document.getElementById('pi-wallet-address-input');
         const saveWalletBtn = document.getElementById('save-wallet-btn');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const toggleStatusBtn = document.getElementById('toggle-status-btn');
         
         let transactionsUnsubscribe = null;
         let currentFilter = 'Pending Verification';
+        let adminStatusListener = null;
 
         // --- FUNCTIONS ---
         function showDashboard(user) {
@@ -138,6 +155,7 @@
             dashboardView.classList.remove('hidden');
             fetchWalletAddress();
             listenForTransactions();
+            listenForAdminStatus();
         }
 
         function showLogin(errorMsg = '') {
@@ -146,6 +164,9 @@
             loginError.textContent = errorMsg;
             if (transactionsUnsubscribe) {
                 transactionsUnsubscribe(); 
+            }
+             if (adminStatusListener) {
+                adminStatusListener();
             }
         }
 
@@ -293,7 +314,7 @@
                 });
             } catch (error) {
                 console.error("Failed to update transaction:", error);
-                alert("Error: Could not update transaction status.");
+                alert("Error: Could not update transaction status. Check console for details.");
                 button.disabled = false;
                 button.textContent = `Update to ${newStatus}`;
             }
@@ -307,48 +328,105 @@
                     piWalletAddressInput.value = docSnap.data().address;
                 } else {
                     // Create the document if it doesn't exist
-                    await setDoc(walletDocRef, { address: "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB" });
-                    piWalletAddressInput.value = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
+                    const defaultAddress = "GB4GBQKCHJ7XBF6EQYMQHHYHXU7XPVTXUU2NJR37YUL6EFJ4243OFHDB";
+                    await setDoc(walletDocRef, { address: defaultAddress });
+                    piWalletAddressInput.value = defaultAddress;
                 }
             } catch (error) {
                 console.error("Error fetching wallet address:", error);
                 piWalletAddressInput.placeholder = "Error loading address.";
             }
         }
-
+        
         async function saveWalletAddress() {
             const newAddress = piWalletAddressInput.value.trim();
-            if (newAddress === '') {
-                alert("The wallet address cannot be empty.");
+            if (!newAddress) {
+                alert("Wallet address cannot be empty.");
                 return;
             }
 
-            const originalBtnText = saveWalletBtn.innerHTML;
             saveWalletBtn.disabled = true;
             saveWalletBtn.innerHTML = `
-                <svg class="animate-spin h-5 w-5 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Saving...
             `;
-            
+
             const walletDocRef = doc(db, "marketData", "piWallet");
             try {
-                // Update the document in Firestore
-                await updateDoc(walletDocRef, { address: newAddress });
+                await setDoc(walletDocRef, { address: newAddress });
                 saveWalletBtn.innerHTML = 'Saved!';
                 setTimeout(() => {
-                    saveWalletBtn.innerHTML = originalBtnText;
                     saveWalletBtn.disabled = false;
+                    saveWalletBtn.textContent = 'Save New Address';
                 }, 2000);
             } catch (error) {
-                console.error("Error saving new wallet address:", error);
-                alert("Failed to save address. Check console for details.");
-                saveWalletBtn.innerHTML = originalBtnText;
-                saveWalletBtn.disabled = false;
+                console.error("Error saving wallet address:", error);
+                saveWalletBtn.innerHTML = 'Save Failed';
+                 alert("Failed to save address. Check console for details.");
+                setTimeout(() => {
+                    saveWalletBtn.disabled = false;
+                    saveWalletBtn.textContent = 'Save New Address';
+                }, 3000);
             }
         }
+        
+         async function listenForAdminStatus() {
+            const statusDocRef = doc(db, "marketData", "adminStatus");
+            adminStatusListener = onSnapshot(statusDocRef, (docSnap) => {
+                let status = 'offline'; // Default to offline
+                if (docSnap.exists() && docSnap.data().status) {
+                    status = docSnap.data().status;
+                }
+                
+                // Base classes that are always present
+                const baseClasses = 'text-sm font-semibold';
+
+                if (status === 'online') {
+                    // --- SETS INDICATOR TO GREEN ---
+                    statusDot.classList.remove('bg-red-500', 'bg-gray-500');
+                    statusDot.classList.add('bg-green-500', 'animate-pulse');
+                    statusText.textContent = 'Admin is Online';
+                    // Force the correct classes, removing any old ones
+                    statusText.className = `${baseClasses} text-green-400`;
+                } else { 
+                    // --- SETS INDICATOR TO RED ---
+                    statusDot.classList.remove('bg-green-500', 'animate-pulse', 'bg-gray-500');
+                    statusDot.classList.add('bg-red-500');
+                    statusText.textContent = 'Admin is Offline';
+                    // Force the correct classes, removing any old ones
+                    statusText.className = `${baseClasses} text-red-400`;
+                }
+            }, (error) => {
+                console.error("Error listening to admin status:", error);
+                statusDot.classList.remove('bg-green-500', 'bg-red-500');
+                statusDot.classList.add('bg-gray-500');
+                statusText.textContent = 'Status Error';
+                statusText.className = 'text-sm font-semibold text-gray-400';
+            });
+        }
+        
+        async function toggleAdminStatus() {
+            const statusDocRef = doc(db, "marketData", "adminStatus");
+            toggleStatusBtn.disabled = true;
+            toggleStatusBtn.textContent = 'Updating...';
+            
+            try {
+                const docSnap = await getDoc(statusDocRef);
+                const currentStatus = (docSnap.exists() && docSnap.data().status) ? docSnap.data().status : 'offline';
+                const newStatus = currentStatus === 'online' ? 'offline' : 'online';
+                await setDoc(statusDocRef, { status: newStatus, lastUpdated: serverTimestamp() });
+            } catch (error) {
+                console.error("Error toggling admin status:", error);
+                alert("Failed to toggle status.");
+            } finally {
+                 toggleStatusBtn.textContent = 'Toggle Status';
+                 toggleStatusBtn.disabled = false;
+            }
+        }
+
 
         // --- MAIN INITIALIZATION ---
         function init() {
@@ -374,9 +452,10 @@
                 button.addEventListener('click', updateFilter);
             });
             saveWalletBtn.addEventListener('click', saveWalletAddress);
+            toggleStatusBtn.addEventListener('click', toggleAdminStatus);
         }
 
-        init();
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 
 </body>

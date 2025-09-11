@@ -1,5 +1,5 @@
 <!--
-    Timestamp: Thursday, September 11, 2025 at 6:01 AM PST
+    Timestamp: Thursday, September 11, 2025 at 6:36 AM PST
     File Name: index.html
     Full File Path: index.html
 
@@ -16,8 +16,13 @@
 	- Revised: The copyAddressBtn event listener now correctly copies the value from the dynamic input field.
 	- Revised: The fetchPrice function was renamed to fetchPriceAndWallet to also include fetching the wallet address on demand.
 	- Deleted: The localStorage check for fb_gate_passed has been completely removed to ensure the Facebook gate is a constant first page.
-	- **FIXED**: The user authentication flow has been corrected so that the login view is shown first if the user is not authenticated. The Facebook invitation page is now only shown after a successful login.
-    - **FIXED**: Removed the redundant and incorrect `DOMContentLoaded` listener at the end of the script. The authentication check is now centralized within the `initApp` function to prevent the "race condition" that caused the views to overlap.
+	- FIXED: The user authentication flow has been corrected so that the login view is shown first if the user is not authenticated. The Facebook invitation page is now only shown after a successful login.
+    - FIXED: Removed the redundant and incorrect `DOMContentLoaded` listener at the end of the script. The authentication check is now centralized within the `initApp` function to prevent the "race condition" that caused the views to overlap.
+    - Added: A new section to the header that displays the admin's online/offline status using a colored dot and text. This status is fetched from Firestore.
+    - Added: A new Firestore listener to the `marketData/adminStatus` document to update the status indicator in real-time.
+    - Added: A new section with a clear informational message for the user about the admin's online status and what to do if they are offline.
+    - Added: A new pop-up modal to warn the user about submitting an order while the admin is offline.
+    - Revised: The `handleSubmitTransaction` function now checks the admin's status and shows the new warning modal if they are offline, before proceeding with the transaction submission.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -93,14 +98,38 @@
         </div>
     </div>
 
+    <!-- New Offline Warning Modal -->
+    <div id="offline-warning-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[100] hidden backdrop-blur-sm">
+        <div class="bg-gray-800 p-6 rounded-lg w-11/12 md:w-full max-w-md shadow-2xl border border-gray-700">
+            <h3 class="text-xl font-bold text-center mb-4 text-orange-400">Admin is Currently Offline</h3>
+            <p class="text-gray-300 text-sm text-center mb-4">
+                The GCash Buyer is not currently online to process real-time payments.
+                You may still submit your order, and it will be processed when the admin
+                comes back online.
+            </p>
+            <p class="text-sm font-semibold text-center text-red-400 mb-6">
+                 If you proceed, remember to capture a screenshot of your Pi transfer
+                 for verification.
+            </p>
+            <div class="mt-6 flex justify-between gap-4">
+                <button id="cancel-offline-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-md transition">Cancel</button>
+                <button id="proceed-offline-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-md transition">Proceed Anyway</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="app-container" class="max-w-2xl mx-auto p-4 md-p-6">
 
         <header id="app-header" class="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-sm py-4 mb-6 text-center hidden shadow-md">
-             <div class="flex items-center justify-center">
+            <div class="flex items-center justify-center">
                 <img src="pi2gc-logo.png" alt="Pi2GCash Logo" class="h-16 w-auto">
             </div>
             <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
+            <div id="admin-status" class="mt-4 flex items-center justify-center space-x-2 p-2 bg-gray-800 rounded-full w-fit mx-auto">
+                <span id="status-dot" class="w-2.5 h-2.5 rounded-full animate-pulse bg-gray-500"></span>
+                <span id="status-text" class="text-xs font-bold text-gray-400">Admin Status: Loading...</span>
+            </div>
         </header>
 
         <div id="login-view" class="hidden text-center py-20">
@@ -145,10 +174,18 @@
              <a href="https://www.facebook.com/groups/751884982155761" target="_blank" class="block w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-lg my-6 text-center">Join the PiCoinPH Facebook Group</a>
              <button id="fb-continue-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">I Have Joined, Continue to App</button>
         </div>
-
-
+        
         <main id="main-view" class="hidden space-y-6">
-
+            <div class="bg-gray-800 p-6 rounded-lg border border-yellow-500">
+                <h3 class="text-xl font-bold mb-3 text-center text-yellow-400">Important: Real-Time Payment Notice</h3>
+                <p class="text-sm text-gray-300">
+                    For immediate processing of your order, please verify that the **Admin / GCash Buyer is currently online** based on the status above.
+                </p>
+                <p class="text-sm text-gray-300 mt-2">
+                    If the status is currently **Offline**, you may still proceed with your Pi transfer, but please be aware that your order will be processed and the GCash payment will be completed when the Admin becomes available. We highly recommend capturing a screenshot of your Pi wallet transfer as proof.
+                </p>
+            </div>
+            
             <div class="bg-gray-800 p-6 rounded-lg">
                 <h3 class="text-xl font-semibold mb-4 text-cyan-400">Step 1: Transfer Your Pi</h3>
                  <div class="space-y-4">
@@ -310,6 +347,7 @@
         let piPrice = 0;
         let currentGcashRate = 0;
         let transactionsUnsubscribe = null;
+        let adminStatus = 'unknown'; // New state variable
         let debounceTimer;
         let inactivityTimer;
         const INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes
@@ -339,6 +377,10 @@
         const appLaunchers = document.getElementById('app-launchers');
         const webviewWarning = document.getElementById('webview-warning');
         const copyLinkBtn = document.getElementById('copy-link-btn');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const confirmModal = document.getElementById('confirm-modal');
+        const offlineWarningModal = document.getElementById('offline-warning-modal');
         
         // --- TOAST NOTIFICATION FUNCTION ---
         function showToast(message, type = 'success') {
@@ -396,6 +438,7 @@
             showView('main');
             fetchPriceAndWallet();
             listenForTransactions();
+            listenForAdminStatus();
             resetInactivityTimer();
         }
 
@@ -500,35 +543,24 @@
                 showToast("You must be logged in to submit a transaction.", 'error');
                 return;
             }
+            
+            // Check admin status before showing modal
+            if (adminStatus === 'offline') {
+                offlineWarningModal.classList.remove('hidden');
+            } else {
+                showConfirmationModal();
+            }
+        }
 
-            const formData = new FormData(e.target);
-            const transactionData = {
-                userId: user.uid,
-                userEmail: user.email,
+        function showConfirmationModal() {
+            const formData = new FormData(transactionForm);
+             const transactionData = {
                 piSent: parseFloat(formData.get('pi-sent')),
                 gcashName: formData.get('gcash-name'),
                 gcashNumber: formData.get('gcash-number'),
-                piWalletSource: formData.get('pi-wallet-source'),
-                transactionTime: new Date(formData.get('transaction-datetime')),
-                status: 'Pending Verification',
-                createdAt: serverTimestamp(),
-                adminNote: '',
                 rateAtSubmission: currentGcashRate
             };
-            
-            // Check for required fields
-            for (const [key, value] of formData.entries()) {
-                if (key === 'pi-sent' && isNaN(parseFloat(value))) {
-                    showToast("Please enter a valid amount of Pi.", 'error');
-                    return;
-                }
-                if (!value || value.trim() === '') {
-                    showToast("Please fill out all the form fields.", 'error');
-                    return;
-                }
-            }
 
-            // Display confirmation modal
             const confirmDetails = document.getElementById('confirm-details');
             confirmDetails.innerHTML = `
                 <p><span class="font-bold text-gray-400">Pi Sent:</span> <span class="text-white">${transactionData.piSent}π</span></p>
@@ -536,7 +568,7 @@
                 <p><span class="font-bold text-gray-400">GCash Number:</span> <span class="text-white">${transactionData.gcashNumber}</span></p>
                 <p><span class="font-bold text-gray-400">Expected GCash:</span> <span class="text-green-400">₱${((transactionData.piSent * transactionData.rateAtSubmission) - 20).toFixed(2)}</span></p>
             `;
-            document.getElementById('confirm-modal').classList.remove('hidden');
+            confirmModal.classList.remove('hidden');
         }
         
         async function confirmAndSubmit() {
@@ -565,7 +597,8 @@
                 Submitting...
             `;
             
-            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmModal.classList.add('hidden');
+            offlineWarningModal.classList.add('hidden');
 
             try {
                 const newTransactionRef = doc(collection(db, "transactions"));
@@ -637,6 +670,35 @@
                  console.error("Error listening to transactions: ", error);
             });
         }
+        
+        function listenForAdminStatus() {
+            const statusDocRef = doc(db, "marketData", "adminStatus");
+            onSnapshot(statusDocRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().status) {
+                    adminStatus = docSnap.data().status;
+                    if (adminStatus === 'online') {
+                        statusDot.classList.remove('bg-red-500');
+                        statusDot.classList.add('bg-green-500', 'animate-pulse');
+                        statusText.textContent = 'Admin Status: Online';
+                    } else {
+                        statusDot.classList.remove('bg-green-500', 'animate-pulse');
+                        statusDot.classList.add('bg-red-500');
+                        statusText.textContent = 'Admin Status: Offline';
+                    }
+                } else {
+                    adminStatus = 'unknown';
+                    statusDot.classList.remove('bg-green-500', 'bg-red-500');
+                    statusDot.classList.add('bg-gray-500');
+                    statusText.textContent = 'Admin Status: Unknown';
+                }
+            }, (error) => {
+                console.error("Error listening to admin status:", error);
+                adminStatus = 'error';
+                statusDot.classList.remove('bg-green-500', 'bg-red-500');
+                statusDot.classList.add('bg-gray-500');
+                statusText.textContent = 'Admin Status: Error';
+            });
+        }
 
 
         // --- MAIN INITIALIZATION ---
@@ -670,7 +732,12 @@
             transactionForm.addEventListener('submit', handleSubmitTransaction);
             document.getElementById('confirm-submit-btn').addEventListener('click', confirmAndSubmit);
             document.getElementById('cancel-confirm-btn').addEventListener('click', () => {
-                document.getElementById('confirm-modal').classList.add('hidden');
+                confirmModal.classList.add('hidden');
+            });
+
+            document.getElementById('proceed-offline-btn').addEventListener('click', confirmAndSubmit);
+            document.getElementById('cancel-offline-btn').addEventListener('click', () => {
+                offlineWarningModal.classList.add('hidden');
             });
             
             updatePriceBtn.addEventListener('click', fetchPriceAndWallet);
